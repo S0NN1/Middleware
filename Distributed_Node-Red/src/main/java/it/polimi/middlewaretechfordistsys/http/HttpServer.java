@@ -10,26 +10,24 @@ import akka.http.javadsl.marshallers.jackson.Jackson;
 import akka.http.javadsl.model.StatusCodes;
 import akka.http.javadsl.server.AllDirectives;
 import akka.http.javadsl.server.Route;
+import akka.http.javadsl.server.directives.RouteDirectives;
 import akka.pattern.Patterns;
-import akka.util.Timeout;
 import it.polimi.middlewaretechfordistsys.actors.ClientActor;
 import it.polimi.middlewaretechfordistsys.exceptions.AlreadyRegisteredException;
 import it.polimi.middlewaretechfordistsys.messages.NodeRedMessage;
-import it.polimi.middlewaretechfordistsys.messages.RegistrationConfirmationMessage;
 import it.polimi.middlewaretechfordistsys.messages.RegistrationMessage;
 import it.polimi.middlewaretechfordistsys.model.Input;
 import it.polimi.middlewaretechfordistsys.model.Node;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.FiniteDuration;
 
+import java.awt.*;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class HttpServer extends AllDirectives {
     private final List<Node> registeredNodes = new ArrayList<>();
@@ -51,8 +49,8 @@ public class HttpServer extends AllDirectives {
     }
 
     private CompletionStage<Done> registerNode(Node node) {
-        for(Node item : registeredNodes) {
-            if(item.getId().equals(node.getId())) {
+        for (Node item : registeredNodes) {
+            if (item.getId().equals(node.getId())) {
                 return CompletableFuture.failedFuture(new AlreadyRegisteredException());
             }
         }
@@ -66,22 +64,26 @@ public class HttpServer extends AllDirectives {
                 post(() ->
                         path("register", () ->
                                 entity(Jackson.unmarshaller(Node.class), node -> {
-                                    client.tell(new RegistrationMessage(node), ActorRef.noSender());
-                                    return complete(StatusCodes.OK);
-                                    /*CompletionStage<Done> futureSaved = registerNode(node);
-                                    if(futureSaved.toCompletableFuture().isCompletedExceptionally()) {
-                                        return complete(StatusCodes.UNPROCESSABLE_ENTITY, "Node already registered");
+                                    CompletableFuture<Object> registrationFuture = Patterns.ask(client, new RegistrationMessage(node), Duration.ofMillis(5000)).toCompletableFuture();
+                                    Route routeDirectives = complete(StatusCodes.INTERNAL_SERVER_ERROR);
+                                    try {
+                                        routeDirectives = registrationFuture.thenApply(response -> {
+                                            if(response == "KO") {
+                                                return complete(StatusCodes.BAD_REQUEST);
+                                            }
+                                            return complete(StatusCodes.OK);
+                                        }).get();
+                                    } catch (InterruptedException | ExecutionException e) {
+                                        e.printStackTrace();
                                     }
-                                    return onSuccess(futureSaved, done ->
-                                            complete("Node successfully registered!")
-                                    );*/
+                                    return routeDirectives;
                                 }))),
                 get(() ->
                         path("send", () -> entity(Jackson.unmarshaller(Input.class), input -> {
                             client.tell(new NodeRedMessage(input.getDestinationId()), ActorRef.noSender());
                             return complete(StatusCodes.OK);
                         }))
-                        )
+                )
         );
     }
 }

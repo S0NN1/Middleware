@@ -3,6 +3,8 @@ package it.polimi.middlewaretechfordistsys.actors;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import akka.actor.Status;
+import it.polimi.middlewaretechfordistsys.exceptions.AlreadyRegisteredException;
 import it.polimi.middlewaretechfordistsys.messages.NodeRedMessage;
 import it.polimi.middlewaretechfordistsys.messages.RegistrationConfirmationMessage;
 import it.polimi.middlewaretechfordistsys.messages.RegistrationMessage;
@@ -29,7 +31,8 @@ public class ComputeActor extends AbstractActor {
     public void onRegistration(RegistrationMessage registrationMessage) {
         for(Node item : nodes) {
             if(item.getId().equals(registrationMessage.getNode().getId())) {
-                sender().tell(new RegistrationConfirmationMessage(), sender());
+                sender().tell(new AlreadyRegisteredException(), ActorRef.noSender());
+                return;
             }
         }
         nodes.add(registrationMessage.getNode());
@@ -48,7 +51,7 @@ public class ComputeActor extends AbstractActor {
         System.out.println("No destination node found!");
     }
 
-    static Props props() {
+    public static Props props() {
         return Props.create(ComputeActor.class);
     }
 
