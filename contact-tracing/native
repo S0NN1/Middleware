@@ -1,0 +1,12 @@
+[WARN: Tun6      ] Failed to open tun device (you may be lacking permission). Running without network.
+[INFO: Main      ] Starting Contiki-NG-release/v4.6-80-g5960f8f1d-dirty
+[INFO: Main      ] - Routing: RPL Lite
+[INFO: Main      ] - Net: tun6
+[INFO: Main      ] - MAC: nullmac
+[INFO: Main      ] - 802.15.4 PANID: 0xabcd
+[INFO: Main      ] - 802.15.4 Default channel: 26
+[INFO: Main      ] Node ID: 1800
+[INFO: Main      ] Link-layer address: 0102.0304.0506.0708
+[INFO: Main      ] Tentative link-local IPv6 address: fe80::302:304:506:708
+[INFO: Native    ] Added global IPv6 address fd00::302:304:506:708
+Hello world!
