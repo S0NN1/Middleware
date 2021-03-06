@@ -6,6 +6,7 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.pattern.Patterns;
 import it.polimi.middlewaretechfordistsys.exceptions.AlreadyRegisteredException;
+import it.polimi.middlewaretechfordistsys.exceptions.DestinationNotFoundException;
 import it.polimi.middlewaretechfordistsys.messages.NodeRedMessage;
 import it.polimi.middlewaretechfordistsys.messages.RegistrationConfirmationMessage;
 import it.polimi.middlewaretechfordistsys.messages.RegistrationMessage;
@@ -35,11 +36,26 @@ public class ClientActor extends AbstractActor {
                 .match(RegistrationMessage.class, this::onRegistrationMessage)
                 .match(RegistrationConfirmationMessage.class, this::onRegistrationConfirmation)
                 .match(AlreadyRegisteredException.class, this::onRegistrationFailed)
+                .match(DestinationNotFoundException.class, this::onDestinationNotFound)
                 .build();
     }
 
     public void onNodeMessage(NodeRedMessage message) {
-        server.tell(message, this.self());
+        CompletableFuture<Object> completableFuture = Patterns.ask(server, message, Duration.ofSeconds(5)).toCompletableFuture();
+        completableFuture.thenApply(resp -> {
+            if(resp instanceof ResponseMessage) {
+                sender().tell(resp, ActorRef.noSender());
+            }
+            else {
+                sender().tell("KO", ActorRef.noSender());
+            }
+            return null;
+        }).join();
+
+    }
+
+    public void onDestinationNotFound(DestinationNotFoundException message) {
+
     }
 
     public void onRegistrationConfirmation(RegistrationConfirmationMessage message) {

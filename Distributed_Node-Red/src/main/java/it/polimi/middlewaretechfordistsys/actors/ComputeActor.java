@@ -4,7 +4,10 @@ import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.Status;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import it.polimi.middlewaretechfordistsys.exceptions.AlreadyRegisteredException;
+import it.polimi.middlewaretechfordistsys.exceptions.DestinationNotFoundException;
 import it.polimi.middlewaretechfordistsys.messages.NodeRedMessage;
 import it.polimi.middlewaretechfordistsys.messages.RegistrationConfirmationMessage;
 import it.polimi.middlewaretechfordistsys.messages.RegistrationMessage;
@@ -13,8 +16,22 @@ import it.polimi.middlewaretechfordistsys.model.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ComputeActor extends AbstractActor {
     private final List<Node> nodes = new ArrayList<>();
@@ -40,15 +57,17 @@ public class ComputeActor extends AbstractActor {
         sender().tell(new RegistrationConfirmationMessage(), ActorRef.noSender());
     }
 
-    public void onMessage(NodeRedMessage message) {
-        ResponseMessage responseMessage = new ResponseMessage(message.getDestinationId());
+    public void onMessage(NodeRedMessage message) throws IOException, InterruptedException {
         for(Node item : nodes) {
             if(item.getId().equals(message.getDestinationId())) {
+                ResponseMessage responseMessage = new ResponseMessage(item.getId(), item.getIp());
                 System.out.println("The destination node was found!");
+                sender().tell(responseMessage, ActorRef.noSender());
                 return;
             }
         }
         System.out.println("No destination node found!");
+        sender().tell(new DestinationNotFoundException(), ActorRef.noSender());
     }
 
     public static Props props() {
