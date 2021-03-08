@@ -53,7 +53,7 @@ public class HttpServer extends AllDirectives {
 
         HttpServer app = new HttpServer();
 
-        final CompletionStage<ServerBinding> binding = http.newServerAt("localhost", 8080).bind(app.createRoute());
+        final CompletionStage<ServerBinding> binding = http.newServerAt("0.0.0.0", 8080).bind(app.createRoute());
 
         System.out.println("Server started at http://localhost:8080 \nPress RETURN to stop.");
         System.in.read();
@@ -119,9 +119,10 @@ public class HttpServer extends AllDirectives {
                                                         Source.single(TextMessage.create(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(map)));
                                                 final Flow<Message, Message, CompletionStage<Done>> flow =
                                                         Flow.fromSinkAndSourceMat(printSink, helloSource, Keep.left());
+                                                String kek = "ws://" + ((ResponseMessage) response).getDestinationIp() + ":" + ((ResponseMessage)response).getDestinationPort() + "/ws/" + ((ResponseMessage)response).getDestinationId();
                                                 final Pair<CompletionStage<WebSocketUpgradeResponse>, CompletionStage<Done>> pair =
                                                         http.singleWebSocketRequest(
-                                                                WebSocketRequest.create("ws://" + ((ResponseMessage) response).getDestinationIp() + "/ws/" + input.getDestinationId()),
+                                                                WebSocketRequest.create("ws://" + ((ResponseMessage) response).getDestinationIp() + ":" + ((ResponseMessage)response).getDestinationPort() + "/ws/" + ((ResponseMessage)response).getDestinationId()),
                                                                 flow,
                                                                 materializer
                                                         );

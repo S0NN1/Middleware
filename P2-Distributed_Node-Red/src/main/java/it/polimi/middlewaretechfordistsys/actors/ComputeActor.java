@@ -3,9 +3,6 @@ package it.polimi.middlewaretechfordistsys.actors;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import akka.actor.Status;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import it.polimi.middlewaretechfordistsys.exceptions.AlreadyRegisteredException;
 import it.polimi.middlewaretechfordistsys.exceptions.DestinationNotFoundException;
 import it.polimi.middlewaretechfordistsys.messages.NodeRedMessage;
@@ -17,21 +14,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.Random;
 
 public class ComputeActor extends AbstractActor {
     private final List<Node> nodes = new ArrayList<>();
@@ -57,13 +44,27 @@ public class ComputeActor extends AbstractActor {
         sender().tell(new RegistrationConfirmationMessage(), ActorRef.noSender());
     }
 
-    public void onMessage(NodeRedMessage message) throws IOException, InterruptedException {
-        for(Node item : nodes) {
-            if(item.getId().equals(message.getDestinationId())) {
-                ResponseMessage responseMessage = new ResponseMessage(item.getId(), item.getIp(), message.getContent());
-                System.out.println("The destination node was found!");
-                sender().tell(responseMessage, ActorRef.noSender());
+    public void onMessage(NodeRedMessage message) {
+        if(message.getDestinationId() == null) {
+            Random random = new Random();
+            Node node = nodes.get(random.nextInt(nodes.size()-1));
+            if(pingHost(node.getIp(), Integer.parseInt(node.getPort()), 2000)) {
+                System.out.println("The destination node was chosen randomly! It is " + node.getId());
+                sender().tell(new ResponseMessage(node.getId(), node.getIp(), message.getContent(), node.getPort()), ActorRef.noSender());
                 return;
+            }
+            nodes.remove(node);
+        }
+        else {
+            for (Node item : nodes) {
+                if (item.getId().equals(message.getDestinationId())) {
+                    if(pingHost(item.getIp(), Integer.parseInt(item.getPort()), 2000)) {
+                        System.out.println("The destination node was found!");
+                        sender().tell(new ResponseMessage(item.getId(), item.getIp(), message.getContent(), item.getPort()), ActorRef.noSender());
+                        return;
+                    }
+                    nodes.remove(item);
+                }
             }
         }
         System.out.println("No destination node found!");
@@ -74,4 +75,13 @@ public class ComputeActor extends AbstractActor {
         return Props.create(ComputeActor.class);
     }
 
+    public static boolean pingHost(String host, int port, int timeout) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), timeout);
+            socket.close();
+            return true;
+        } catch (IOException e) {
+            return false; // Either timeout or unreachable or failed DNS lookup.
+        }
+    }
 }
