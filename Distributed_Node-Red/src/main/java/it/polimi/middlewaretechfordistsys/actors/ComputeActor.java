@@ -60,7 +60,7 @@ public class ComputeActor extends AbstractActor {
     public void onMessage(NodeRedMessage message) throws IOException, InterruptedException {
         for(Node item : nodes) {
             if(item.getId().equals(message.getDestinationId())) {
-                ResponseMessage responseMessage = new ResponseMessage(item.getId(), item.getIp());
+                ResponseMessage responseMessage = new ResponseMessage(item.getId(), item.getIp(), message.getContent());
                 System.out.println("The destination node was found!");
                 sender().tell(responseMessage, ActorRef.noSender());
                 return;

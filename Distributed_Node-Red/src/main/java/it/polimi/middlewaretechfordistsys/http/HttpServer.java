@@ -93,7 +93,7 @@ public class HttpServer extends AllDirectives {
                                 }))),
                 post(() ->
                         path("send", () -> entity(Jackson.unmarshaller(Input.class), input -> {
-                            CompletableFuture<Object> sendFuture = Patterns.ask(client, new NodeRedMessage(input.getDestinationId()), Duration.ofSeconds(5)).toCompletableFuture();
+                            CompletableFuture<Object> sendFuture = Patterns.ask(client, new NodeRedMessage(input.getDestinationId(), input.getContent()), Duration.ofSeconds(5)).toCompletableFuture();
                             Route route = complete(StatusCodes.INTERNAL_SERVER_ERROR);
                             try {
                                 route = sendFuture.thenApply(response -> {
@@ -110,6 +110,7 @@ public class HttpServer extends AllDirectives {
                                                     );
                                             Map<String, String> map = new HashMap<>() {{
                                                 put("destinationId", ((ResponseMessage) response).getDestinationId());
+                                                put("content", ((ResponseMessage) response).getContent());
                                             }};
                                             ObjectMapper objectMapper = new ObjectMapper();
                                             try {
