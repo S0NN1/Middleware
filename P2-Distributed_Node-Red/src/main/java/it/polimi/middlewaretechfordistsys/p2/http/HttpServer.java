@@ -1,4 +1,4 @@
-package it.polimi.middlewaretechfordistsys.http;
+package it.polimi.middlewaretechfordistsys.p2.http;
 
 import akka.Done;
 import akka.NotUsed;
@@ -12,10 +12,8 @@ import akka.http.javadsl.model.StatusCodes;
 import akka.http.javadsl.model.ws.Message;
 import akka.http.javadsl.model.ws.TextMessage;
 import akka.http.javadsl.model.ws.WebSocketRequest;
-import akka.http.javadsl.model.ws.WebSocketUpgradeResponse;
 import akka.http.javadsl.server.AllDirectives;
 import akka.http.javadsl.server.Route;
-import akka.japi.Pair;
 import akka.pattern.Patterns;
 import akka.stream.ActorMaterializer;
 import akka.stream.Materializer;
@@ -25,30 +23,36 @@ import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import it.polimi.middlewaretechfordistsys.actors.ClientActor;
-import it.polimi.middlewaretechfordistsys.exceptions.AlreadyRegisteredException;
-import it.polimi.middlewaretechfordistsys.messages.NodeRedMessage;
-import it.polimi.middlewaretechfordistsys.messages.RegistrationMessage;
-import it.polimi.middlewaretechfordistsys.messages.ResponseMessage;
-import it.polimi.middlewaretechfordistsys.model.Input;
-import it.polimi.middlewaretechfordistsys.model.Node;
+import it.polimi.middlewaretechfordistsys.p2.actors.ClientActor;
+import it.polimi.middlewaretechfordistsys.p2.messages.NodeRedMessage;
+import it.polimi.middlewaretechfordistsys.p2.messages.RegistrationMessage;
+import it.polimi.middlewaretechfordistsys.p2.messages.ResponseMessage;
+import it.polimi.middlewaretechfordistsys.p2.model.Input;
+import it.polimi.middlewaretechfordistsys.p2.model.Node;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
+/**
+ * Akka main class, which is a http server that handles all the incoming requests.
+ * On the other hand, it exchanges messages with the computing actor through the local client actor.
+ */
+
 public class HttpServer extends AllDirectives {
-    private final List<Node> registeredNodes = new ArrayList<>();
     private final akka.actor.ActorSystem actorSystem = akka.actor.ActorSystem.create("client");
     private final ActorRef client = actorSystem.actorOf(ClientActor.props(), "client");
 
 
+    /**
+     * Main class of the application. It starts an http server on the given port and creates the actor system.
+     * @param args the usual main args :)
+     * @throws IOException if the server cannot be launched.
+     */
     public static void main(String[] args) throws IOException {
-        ActorSystem<Void> system = ActorSystem.create(Behaviors.<Void>empty(), "routes");
+        ActorSystem<Void> system = ActorSystem.create(Behaviors.empty(), "routes");
         final Http http = Http.get(system);
 
         HttpServer app = new HttpServer();
@@ -61,23 +65,20 @@ public class HttpServer extends AllDirectives {
         binding.thenCompose(ServerBinding::unbind).thenAccept(unbound -> system.terminate());
     }
 
-    private CompletionStage<Done> registerNode(Node node) {
-        for (Node item : registeredNodes) {
-            if (item.getId().equals(node.getId())) {
-                return CompletableFuture.failedFuture(new AlreadyRegisteredException());
-            }
-        }
-        registeredNodes.add(node);
-        System.out.println(registeredNodes.size());
-        return CompletableFuture.completedFuture(Done.getInstance());
-    }
-
+    /**
+     * Create a list of routes for http request, which contain the subsequently actions to be executed.
+     * In particular:
+     * - the register route lets a new node to join into the system;
+     * - the send route lets a message to be sent from a node to another one.
+     * @return a route which can be accessed through usual http methods (GET, POST and so on so forth).
+     */
     private Route createRoute() {
         return concat(
                 post(() ->
                         path("register", () ->
                                 entity(Jackson.unmarshaller(Node.class), node -> {
-                                    CompletableFuture<Object> registrationFuture = Patterns.ask(client, new RegistrationMessage(node), Duration.ofMillis(5000)).toCompletableFuture();
+                                    CompletableFuture<Object> registrationFuture = Patterns.ask(client,
+                                            new RegistrationMessage(node), Duration.ofMillis(5000)).toCompletableFuture();
                                     Route routeDirectives = complete(StatusCodes.INTERNAL_SERVER_ERROR);
                                     try {
                                         routeDirectives = registrationFuture.thenApply(response -> {
@@ -119,13 +120,13 @@ public class HttpServer extends AllDirectives {
                                                         Source.single(TextMessage.create(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(map)));
                                                 final Flow<Message, Message, CompletionStage<Done>> flow =
                                                         Flow.fromSinkAndSourceMat(printSink, helloSource, Keep.left());
-                                                String kek = "ws://" + ((ResponseMessage) response).getDestinationIp() + ":" + ((ResponseMessage)response).getDestinationPort() + "/ws/" + ((ResponseMessage)response).getDestinationId();
-                                                final Pair<CompletionStage<WebSocketUpgradeResponse>, CompletionStage<Done>> pair =
-                                                        http.singleWebSocketRequest(
-                                                                WebSocketRequest.create("ws://" + ((ResponseMessage) response).getDestinationIp() + ":" + ((ResponseMessage)response).getDestinationPort() + "/ws/" + ((ResponseMessage)response).getDestinationId()),
-                                                                flow,
-                                                                materializer
-                                                        );
+                                                http.singleWebSocketRequest(
+                                                        WebSocketRequest.create("ws://" +
+                                                                ((ResponseMessage) response).getDestinationIp() + ":" +
+                                                                ((ResponseMessage) response).getDestinationPort() +
+                                                                "/ws/" + ((ResponseMessage) response).getDestinationId()),
+                                                        flow, materializer
+                                                );
                                             } catch (JsonProcessingException e) {
                                                 e.printStackTrace();
                                             }

@@ -1,4 +1,4 @@
-package it.polimi.middlewaretechfordistsys;
+package it.polimi.middlewaretechfordistsys.p2;
 
 import static org.junit.Assert.assertTrue;
 

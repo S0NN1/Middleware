@@ -1,8 +1,12 @@
-package it.polimi.middlewaretechfordistsys.model;
+package it.polimi.middlewaretechfordistsys.p2.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * It encapsulate the information about a registered node, which are basically its identifier, its ip address and its
+ * node-red running port.
+ */
 public class Node {
     private final String id;
     private final String ip;

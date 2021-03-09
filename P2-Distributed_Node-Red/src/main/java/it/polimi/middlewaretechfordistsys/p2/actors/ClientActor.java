@@ -1,27 +1,27 @@
-package it.polimi.middlewaretechfordistsys.actors;
+package it.polimi.middlewaretechfordistsys.p2.actors;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.pattern.Patterns;
-import it.polimi.middlewaretechfordistsys.exceptions.AlreadyRegisteredException;
-import it.polimi.middlewaretechfordistsys.exceptions.DestinationNotFoundException;
-import it.polimi.middlewaretechfordistsys.messages.NodeRedMessage;
-import it.polimi.middlewaretechfordistsys.messages.RegistrationConfirmationMessage;
-import it.polimi.middlewaretechfordistsys.messages.RegistrationMessage;
-import it.polimi.middlewaretechfordistsys.messages.ResponseMessage;
+import it.polimi.middlewaretechfordistsys.p2.exceptions.AlreadyRegisteredException;
+import it.polimi.middlewaretechfordistsys.p2.exceptions.DestinationNotFoundException;
+import it.polimi.middlewaretechfordistsys.p2.messages.NodeRedMessage;
+import it.polimi.middlewaretechfordistsys.p2.messages.RegistrationConfirmationMessage;
+import it.polimi.middlewaretechfordistsys.p2.messages.RegistrationMessage;
+import it.polimi.middlewaretechfordistsys.p2.messages.ResponseMessage;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
+/**
+ * This class represents the client actor, which receives information from the http server and ask to the compute actor
+ * for a computation, which can be a new node registration or a request of a destination node information (ip, port, etc.)
+ */
 public class ClientActor extends AbstractActor {
     private final ActorSystem actorSystem;
     private final ActorRef server;
-    private final int numThreads = 16;
-    final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
 
     public ClientActor() {
         actorSystem = ActorSystem.create("ClientActor");
@@ -40,6 +40,10 @@ public class ClientActor extends AbstractActor {
                 .build();
     }
 
+    /**
+     * This method is triggered when a NodeRedMessage is received. It simply sends it to the compute actor.
+     * @param message the message to be passed.
+     */
     public void onNodeMessage(NodeRedMessage message) {
         CompletableFuture<Object> completableFuture = Patterns.ask(server, message, Duration.ofSeconds(5)).toCompletableFuture();
         completableFuture.thenApply(resp -> {
@@ -54,19 +58,19 @@ public class ClientActor extends AbstractActor {
 
     }
 
-    public void onDestinationNotFound(DestinationNotFoundException message) {
+    public void onDestinationNotFound(DestinationNotFoundException message) {}
 
-    }
-
+    /**
+     * This method is triggered when a confirmation of registration is received from the compute actor.
+     * @param message the confirmation message.
+     */
     public void onRegistrationConfirmation(RegistrationConfirmationMessage message) {
         System.out.println("Registration ack received");
     }
 
-    public void onRegistrationFailed(AlreadyRegisteredException e) {
-        System.out.println("KEK");
-    }
+    public void onRegistrationFailed(AlreadyRegisteredException e) {}
 
-    public void onRegistrationMessage(RegistrationMessage message) throws InterruptedException {
+    public void onRegistrationMessage(RegistrationMessage message) {
         CompletableFuture<Object> kek = Patterns.ask(server, message, Duration.ofSeconds(5)).toCompletableFuture();
         kek.thenApply(resp -> {
             if(resp instanceof RegistrationConfirmationMessage) {
@@ -86,5 +90,4 @@ public class ClientActor extends AbstractActor {
     public static Props props() {
         return Props.create(ClientActor.class);
     }
-
 }
