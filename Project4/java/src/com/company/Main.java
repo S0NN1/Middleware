@@ -219,6 +219,7 @@ public class Main {
         return n;
     }
 
+    /*
     private static ArrayList<rettangolo> GeneraRettangoli(int w, int l) {
         ArrayList<rettangolo> r = new ArrayList<>();
         for (int i=0; i<w; i++)
@@ -236,6 +237,8 @@ public class Main {
         return r;
 
     }
+
+     */
 
 
 
@@ -628,11 +631,13 @@ class subnazione {
     point p;
     int rank;
 }
-
+/*
 class rettangolo
 {
     point p;
 }
+*/
+
 
 class point{
     int x;
