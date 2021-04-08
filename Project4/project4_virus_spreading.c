@@ -788,12 +788,12 @@ int main(int argc, char** argv) {
 	int sizeOfIndividualSummaryWithRank = sizeof(struct individualSummaryWithRank);
 	if (subNationsNum < 0)
 	{
-		printf("Le aree non sono ben suddivisibili \n");
+		//printf("Le aree non sono ben suddivisibili \n");
 		MPI_Finalize();
 		return;
 	}
 	else {
-		printf("Le aree sono ben suddivisibili: %d \n", subNationsNum);
+		//printf("Le aree sono ben suddivisibili: %d \n", subNationsNum);
 	}
 
 	MPI_Init(NULL, NULL);
@@ -802,24 +802,24 @@ int main(int argc, char** argv) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-	printf("Hi. I'm alive. My rank is %d and world size is %d \n", my_rank, world_size);
+	//printf("Hi. I'm alive. My rank is %d and world size is %d \n", my_rank, world_size);
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	struct arrayWithSize howManySubNationsPerProcess =
 		calculateDistributionSubnationsToProcess(world_size, subNationsNum);
 
-	printArrayInt(howManySubNationsPerProcess);
+	//printArrayInt(howManySubNationsPerProcess);
 
 	int maxRectanglesPerProcess = getMax(howManySubNationsPerProcess);
 	if (maxRectanglesPerProcess < 0)
 	{
-		printf("maxRectanglesPerProcess<0");
+		//printf("maxRectanglesPerProcess<0");
 		MPI_Finalize();
 		return;
 	}
 	else
 	{
-		printf("maxRectanglesPerProcess=%d \n", maxRectanglesPerProcess);
+		//printf("maxRectanglesPerProcess=%d \n", maxRectanglesPerProcess);
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -854,8 +854,8 @@ int main(int argc, char** argv) {
 
 	if (buffer != NULL)
 	{
-		printf("Hi I'm process %d and I will now print the first element of my received buffer. Infected: %d, sane: %d, rank: %d \n",
-			my_rank, buffer[0].individualSummary.infected, buffer[0].individualSummary.sane, buffer[0].rank);
+		//printf("Hi I'm process %d and I will now print the first element of my received buffer. Infected: %d, sane: %d, rank: %d \n",
+		//	my_rank, buffer[0].individualSummary.infected, buffer[0].individualSummary.sane, buffer[0].rank);
 	}
 
 	struct nation nazioneItem;
@@ -866,13 +866,13 @@ int main(int argc, char** argv) {
 	struct subnation* sb1 = nazioneItem.list.pList;
 	if (sb1 == NULL)
 	{
-		printf("Hi I'm process %d and I the first element of my nation is null\n", my_rank);
+		//printf("Hi I'm process %d and I the first element of my nation is null\n", my_rank);
 	}
 	else {
 		struct individual** sb2 = sb1[0].people.pList;
 
-		printf("Hi I'm process %d and I will now print the first element of my nation. RankNation: %d, size: %d, rectangles: %d, rankSubnation: %d, Xposition: %d, Yposition: %d, IdFirstPerson: %d \n",
-			my_rank, nazioneItem.rank, nazioneItem.list.currentSize, sb1[0].nRectangles, sb1[0].rank, sb1[0].position.x, sb1[0].position.y, sb2[0]->id);
+		//printf("Hi I'm process %d and I will now print the first element of my nation. RankNation: %d, size: %d, rectangles: %d, rankSubnation: %d, Xposition: %d, Yposition: %d, IdFirstPerson: %d \n",
+		//	my_rank, nazioneItem.rank, nazioneItem.list.currentSize, sb1[0].nRectangles, sb1[0].rank, sb1[0].position.x, sb1[0].position.y, sb2[0]->id);
 	}
 
 	struct arrayWithSize people = getPeople(nazioneItem);
