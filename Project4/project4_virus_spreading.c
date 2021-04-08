@@ -462,24 +462,47 @@ void printInfoInfetti(struct individualSummaryWithRank i2, int maxRectanglesPerP
 		printf("  >TOT: INFETTI %d, SANI %d\n", i2.individualSummary.infected, i2.individualSummary.sane);
 	}
 	else {
-		printf("  > %d: INFETTI %d, SANI %d\n", (i2.rank - ((i / maxRectanglesPerProcess) * maxRectanglesPerProcess)), i2.individualSummary.infected, i2.individualSummary.sane);
+		int index = (i2.rank - ((i / maxRectanglesPerProcess) * maxRectanglesPerProcess));
+		if (index >= 10)
+			printf("  > %d: INFETTI %d, SANI %d\n", index, i2.individualSummary.infected, i2.individualSummary.sane);
+		else
+			printf("  >  %d: INFETTI %d, SANI %d\n", index, i2.individualSummary.infected, i2.individualSummary.sane);
 	}
 }
 
-void printArray(struct arrayWithSize buffer3, int maxRectanglesPerProcess, int world_size) {
+void printArray(struct arrayWithSize buffer3, int maxRectanglesPerProcess) {
 	struct individualSummaryWithRank* p2 = buffer3.pList;
+	int totInfectedPartial = 0;
+	int totSanePartial = 0;
+	int totInfectedTotal = 0;
+	int totSaneTotal = 0;
 	for (int i = 0; i < buffer3.currentSize; i++)
 	{
+		struct individualSummaryWithRank p3 = p2[i];
 		if (i % maxRectanglesPerProcess == 0)
 		{
-			printf(" Rank: %d\n", i/maxRectanglesPerProcess);
+			totInfectedPartial = 0;
+			totSanePartial = 0;
+			printf(" Rank: %d\n", i / maxRectanglesPerProcess);
 		}
-		printInfoInfetti(p2[i], maxRectanglesPerProcess, i);
-		if ((i+1) % maxRectanglesPerProcess == 0)
+
+		(totInfectedPartial) += p3.individualSummary.infected;
+		(totSanePartial) += p3.individualSummary.sane;
+		totInfectedTotal += p3.individualSummary.infected;
+		totSaneTotal += p3.individualSummary.sane;
+
+		printInfoInfetti(p3, maxRectanglesPerProcess, i);
+
+		if (maxRectanglesPerProcess > 0)
 		{
-			printf("--\n");
+			if ((i + 1) % maxRectanglesPerProcess == 0)
+			{
+				printf("  >TOT: INFETTI %d, SANI %d\n", (totInfectedPartial), (totSanePartial));
+			}
 		}
 	}
+
+	printf(">TOT: INFETTI %d, SANI %d\n", (totInfectedTotal), (totSaneTotal));
 }
 
 struct arrayWithSize GetSubnazioni(struct nation nazioneItem, int rank) {
@@ -653,7 +676,7 @@ struct individualSummaryWithRank*
 							struct individual* pc1 = (plist[ip]);
 							struct individual* pc2 = (plist2[ip2]);
 
-							if ((pc1->id != pc2->id && pc1->rank == pc2->rank)								&& pc2->isInfected)
+							if ((pc1->id != pc2->id && pc1->rank == pc2->rank) && pc2->isInfected)
 							{
 								struct vicinanza* vicinanzaItem = TrovaVicinanza(pc1, pc2, storicoContatti);
 								if (vicinanzaItem == NULL || vicinanzaItem->to == NULL && vicinanzaItem->from == NULL) {
@@ -803,13 +826,11 @@ int main(int argc, char** argv) {
 	int timeStep = 10 * 60;
 	int d = 1;//10;
 
-	
 	if (argc < 10) {
 		printf("mpiexec -n WorldSize .\exec numInfectedTotal numPeopleTotal dimWorldX dimWorldY days dimSubCountryX dimSubCountryY timestep distance\n\n");
 		return;
 	}
 
-	
 	numInfected = atoi(argv[1]);
 	numPeople = atoi(argv[2]);
 	dimWorld.x = atoi(argv[3]);
@@ -819,7 +840,6 @@ int main(int argc, char** argv) {
 	dimSubCountry.y = atoi(argv[7]);
 	timeStep = atoi(argv[8]);
 	d = atoi(argv[9]);
-	
 
 	int subNationsNum = calculateNumSubnations(dimWorld.x, dimWorld.y, dimSubCountry.x, dimSubCountry.y);
 	int sizeOfIndividualSummaryWithRank = sizeof(struct individualSummaryWithRank);
@@ -946,7 +966,7 @@ int main(int argc, char** argv) {
 			buffer3_toprint.pList = buffer3;
 			buffer3_toprint.currentSize = maxRectanglesPerProcess * world_size;
 			buffer3_toprint.maxSize = buffer3_toprint.currentSize;
-			printArray(buffer3_toprint, maxRectanglesPerProcess, world_size);
+			printArray(buffer3_toprint, maxRectanglesPerProcess);
 		}
 
 		MPI_Barrier(MPI_COMM_WORLD);
