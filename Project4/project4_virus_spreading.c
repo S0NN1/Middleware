@@ -456,15 +456,29 @@ struct arrayWithSize getPeople(struct nation nazioneItem) {
 	return people;
 }
 
-void printInfoInfetti(struct individualSummaryWithRank i2) {
-	printf("%d: INFETTI %d, SANI %d\n", i2.rank, i2.individualSummary.infected, i2.individualSummary.sane);
+void printInfoInfetti(struct individualSummaryWithRank i2, int maxRectanglesPerProcess, int i) {
+	if (maxRectanglesPerProcess == 1)
+	{
+		printf("  >TOT: INFETTI %d, SANI %d\n", i2.individualSummary.infected, i2.individualSummary.sane);
+	}
+	else {
+		printf("  > %d: INFETTI %d, SANI %d\n", (i2.rank - ((i / maxRectanglesPerProcess) * maxRectanglesPerProcess)), i2.individualSummary.infected, i2.individualSummary.sane);
+	}
 }
 
-void printArray(struct arrayWithSize buffer3) {
+void printArray(struct arrayWithSize buffer3, int maxRectanglesPerProcess, int world_size) {
 	struct individualSummaryWithRank* p2 = buffer3.pList;
 	for (int i = 0; i < buffer3.currentSize; i++)
 	{
-		printInfoInfetti(p2[i]);
+		if (i % maxRectanglesPerProcess == 0)
+		{
+			printf(" Rank: %d\n", i/maxRectanglesPerProcess);
+		}
+		printInfoInfetti(p2[i], maxRectanglesPerProcess, i);
+		if ((i+1) % maxRectanglesPerProcess == 0)
+		{
+			printf("--\n");
+		}
 	}
 }
 
@@ -493,7 +507,7 @@ int rectIndex(int x, int y, int w, int l) {
 	return (x * w) + y;
 }
 
-struct arrayWithSize  trovaRettangolo(struct subnation subnazioneItem,
+struct arrayWithSize trovaRettangolo(struct subnation subnazioneItem,
 	struct individual* p, int d, int rank, int w, int l) {
 	struct arrayWithSize  r;
 	r.currentSize = 0;
@@ -533,6 +547,12 @@ struct arrayWithSize getPeopleNear(int rectIndex, struct subnation subnazioneIte
 		{
 			r = insertIndividual(r, p2[i]);
 		}
+	}
+
+	if (r.currentSize == 0)
+	{
+		int a = 0;
+		a++;
 	}
 
 	return r;
@@ -633,9 +653,7 @@ struct individualSummaryWithRank*
 							struct individual* pc1 = (plist[ip]);
 							struct individual* pc2 = (plist2[ip2]);
 
-							if ((pc1->id != pc2->id && pc1->rank != pc2->rank
-								&& pc1->position.x != pc2->position.x && pc1->position.y != pc2->position.y)
-								&& pc2->isInfected)
+							if ((pc1->id != pc2->id && pc1->rank == pc2->rank)								&& pc2->isInfected)
 							{
 								struct vicinanza* vicinanzaItem = TrovaVicinanza(pc1, pc2, storicoContatti);
 								if (vicinanzaItem == NULL || vicinanzaItem->to == NULL && vicinanzaItem->from == NULL) {
@@ -773,17 +791,36 @@ int main(int argc, char** argv) {
 	// Init random number generator
 	srand((unsigned int)time(NULL));
 
-	int numInfected = 100;
-	int numPeople = 500;
+	int numInfected = 500;// 100;
+	int numPeople = 500; //500;
 	struct point dimWorld;
-	dimWorld.x = 250;
-	dimWorld.y = 250;
-	int days = 5;
+	dimWorld.x = 25;// 250;
+	dimWorld.y = 25; //250;
+	int days = 3; //5;
 	struct point dimSubCountry;
-	dimSubCountry.x = 125;
-	dimSubCountry.y = 125;
-	int timeStep = 30 * 60;
-	int d = 2;
+	dimSubCountry.x = 5;//125;
+	dimSubCountry.y = 5;//125;
+	int timeStep = 10 * 60;
+	int d = 1;//10;
+
+	
+	if (argc < 10) {
+		printf("mpiexec -n WorldSize .\exec numInfectedTotal numPeopleTotal dimWorldX dimWorldY days dimSubCountryX dimSubCountryY timestep distance\n\n");
+		return;
+	}
+
+	
+	numInfected = atoi(argv[1]);
+	numPeople = atoi(argv[2]);
+	dimWorld.x = atoi(argv[3]);
+	dimWorld.y = atoi(argv[4]);
+	days = atoi(argv[5]);
+	dimSubCountry.x = atoi(argv[6]);
+	dimSubCountry.y = atoi(argv[7]);
+	timeStep = atoi(argv[8]);
+	d = atoi(argv[9]);
+	
+
 	int subNationsNum = calculateNumSubnations(dimWorld.x, dimWorld.y, dimSubCountry.x, dimSubCountry.y);
 	int sizeOfIndividualSummaryWithRank = sizeof(struct individualSummaryWithRank);
 	if (subNationsNum < 0)
@@ -907,9 +944,9 @@ int main(int argc, char** argv) {
 
 			struct arrayWithSize buffer3_toprint;
 			buffer3_toprint.pList = buffer3;
-			buffer3_toprint.currentSize = maxRectanglesPerProcess;
+			buffer3_toprint.currentSize = maxRectanglesPerProcess * world_size;
 			buffer3_toprint.maxSize = buffer3_toprint.currentSize;
-			printArray(buffer3_toprint);
+			printArray(buffer3_toprint, maxRectanglesPerProcess, world_size);
 		}
 
 		MPI_Barrier(MPI_COMM_WORLD);
