@@ -20,6 +20,7 @@ struct individual {
 	struct point position;
 	int isInfected;
 	int lastTimeHeWasInfected;
+	int lastTimeHeRecovered;
 	int id;
 	int subnation;
 };
@@ -413,6 +414,7 @@ struct nation GeneraMappa(
 			personItem->position.x = getRandomNumber(0, w);
 			personItem->position.y = getRandomNumber(0, l);
 			personItem->lastTimeHeWasInfected = 0;
+			personItem->lastTimeHeRecovered = -1;
 			personItem->id = r.people.currentSize;
 			personItem->subnation = k2;
 			r.people = insertIndividual(r.people, personItem);
@@ -426,6 +428,7 @@ struct nation GeneraMappa(
 			personItem->position.x = getRandomNumber(0, w);
 			personItem->position.y = getRandomNumber(0, l);
 			personItem->lastTimeHeWasInfected = -1;
+			personItem->lastTimeHeRecovered = -1;
 			personItem->id = r.people.currentSize;
 			personItem->subnation = k2;
 			r.people = insertIndividual(r.people, personItem);
@@ -523,8 +526,9 @@ struct arrayWithSize GetSubnazioni(struct nation nazioneItem, int rank) {
 	return r;
 }
 
-int minDurataPerInfettarsi = 10 * 60;
-int durataPerGuarire = 15 * 60;
+int minDurataPerInfettarsi = 10 * 60; //10 minuti
+int durataPerGuarire = 60 * 60 * 24 * 10; //10 giorni
+int tempoPerDiventareSuscettibileDopoEssertiInfettato = 60 * 60 * 24 * 90; // 3 mesi
 
 int rectIndex(int x, int y, int w, int l) {
 	return (x * w) + y;
@@ -647,7 +651,7 @@ struct individualSummaryWithRank*
 		struct subnation subNazioneItem, int rank,
 		int t, int d, struct arrayWithSize people,
 		struct arrayWithSize storicoContatti,
-		int w, int l, int i_t2, int subnazioneIndex)
+		int w, int l, int i_t2, int subnazioneIndex, int velocity)
 {
 	struct individual** plist = people.pList;
 
@@ -661,6 +665,7 @@ struct individualSummaryWithRank*
 				plist[ip]->isInfected = 0;
 				buffer[subnazioneIndex].individualSummary.infected--;
 				buffer[subnazioneIndex].individualSummary.sane++;
+				plist[ip]->lastTimeHeRecovered = t * i_t2;
 			}
 
 			if (buffer[subnazioneIndex].individualSummary.infected > 0) {
@@ -703,7 +708,7 @@ struct individualSummaryWithRank*
 									}
 
 									if (v->timeFine - v->timeInizio >= minDurataPerInfettarsi
-										&& !pc1->isInfected)
+										&& !pc1->isInfected && (pc1->lastTimeHeRecovered < 0 || pc1->lastTimeHeRecovered + tempoPerDiventareSuscettibileDopoEssertiInfettato >= (t * i_t2)))
 									{
 										pc1->isInfected = 1;
 										buffer[subnazioneIndex].individualSummary.sane--;
@@ -715,7 +720,7 @@ struct individualSummaryWithRank*
 									vicinanzaItem->timeFine = t * i_t2;
 
 									if (vicinanzaItem->timeFine - vicinanzaItem->timeInizio >= minDurataPerInfettarsi
-										&& !pc1->isInfected) {
+										&& !pc1->isInfected && (pc1->lastTimeHeRecovered < 0 || pc1->lastTimeHeRecovered + tempoPerDiventareSuscettibileDopoEssertiInfettato >= (t * i_t2))) {
 										pc1->isInfected = 1;
 										buffer[subnazioneIndex].individualSummary.sane--;
 										buffer[subnazioneIndex].individualSummary.infected++;
@@ -736,14 +741,14 @@ struct individualSummaryWithRank*
 		int moveY = getRandomNumber(0, 1);
 
 		if (moveX == 0)
-			plist[i]->position.x++;
+			plist[i]->position.x += velocity;
 		else
-			plist[i]->position.x--;
+			plist[i]->position.x -= velocity;
 
 		if (moveY == 0)
-			plist[i]->position.y++;
+			plist[i]->position.y += velocity;
 		else
-			plist[i]->position.y--;
+			plist[i]->position.y -= velocity;
 
 		if (plist[i]->position.x >= w)
 		{
@@ -775,7 +780,7 @@ struct individualSummaryWithRank* calcolaAvanzamentoContagi(
 	int rank, int t, int d,
 	struct arrayWithSize people,
 	struct arrayWithSize storicoContatti,
-	int w, int l)
+	int w, int l, int velocity)
 {
 	//struct individualSummary* a = buffer[rank];
 
@@ -791,7 +796,7 @@ struct individualSummaryWithRank* calcolaAvanzamentoContagi(
 		for (int i = 0; i < t2; i++) {
 			buffer = calcolaAvanzamentoContagi2(buffer, sb2,
 				rank, t, d, people,
-				storicoContatti, w, l, i, sbi);
+				storicoContatti, w, l, i, sbi, velocity);
 
 			//printArray(buffer, rank);
 			//System.out.println("");
@@ -814,6 +819,12 @@ int main(int argc, char** argv) {
 	// Init random number generator
 	srand((unsigned int)time(NULL));
 
+	MPI_Init(NULL, NULL);
+
+	int my_rank, world_size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
 	int numInfected = 500;// 100;
 	int numPeople = 500; //500;
 	struct point dimWorld;
@@ -825,9 +836,13 @@ int main(int argc, char** argv) {
 	dimSubCountry.y = 5;//125;
 	int timeStep = 10 * 60;
 	int d = 1;//10;
+	int velocity = 1;
 
-	if (argc < 10) {
-		printf("mpiexec -n WorldSize .\exec numInfectedTotal numPeopleTotal dimWorldX dimWorldY days dimSubCountryX dimSubCountryY timestep distance\n\n");
+	if (argc < 11) {
+		if (my_rank == 0)
+			printf("mpiexec -n WorldSize .\exec numInfectedTotal numPeopleTotal dimWorldX dimWorldY days dimSubCountryX dimSubCountryY timestep distance velocity\n\n");
+
+		MPI_Finalize();
 		return;
 	}
 
@@ -840,6 +855,7 @@ int main(int argc, char** argv) {
 	dimSubCountry.y = atoi(argv[7]);
 	timeStep = atoi(argv[8]);
 	d = atoi(argv[9]);
+	velocity = atoi(argv[10]);
 
 	int subNationsNum = calculateNumSubnations(dimWorld.x, dimWorld.y, dimSubCountry.x, dimSubCountry.y);
 	int sizeOfIndividualSummaryWithRank = sizeof(struct individualSummaryWithRank);
@@ -852,12 +868,6 @@ int main(int argc, char** argv) {
 	else {
 		//printf("Le aree sono ben suddivisibili: %d \n", subNationsNum);
 	}
-
-	MPI_Init(NULL, NULL);
-
-	int my_rank, world_size;
-	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
 	//printf("Hi. I'm alive. My rank is %d and world size is %d \n", my_rank, world_size);
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -951,7 +961,7 @@ int main(int argc, char** argv) {
 		if (i >= 0)
 		{
 			buffer = calcolaAvanzamentoContagi(buffer, nazioneItem,
-				my_rank, timeStep, d, people, hashStoricoVar, dimSubCountry.x, dimSubCountry.y);
+				my_rank, timeStep, d, people, hashStoricoVar, dimSubCountry.x, dimSubCountry.y, velocity);
 		}
 
 		MPI_Gather(buffer, maxRectanglesPerProcess * scale, MPI_INT,
