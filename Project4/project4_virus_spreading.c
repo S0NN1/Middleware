@@ -535,15 +535,15 @@ int rectIndex(int x, int y, int w, int l) {
 }
 
 struct arrayWithSize trovaRettangolo(struct subnation subnazioneItem,
-	struct individual* p, int d, int rank, int w, int l) {
+	struct individual* p, int distanceToBeInfected, int rank, int w, int l) {
 	struct arrayWithSize  r;
 	r.currentSize = 0;
 	r.maxSize = 0;
 	r.pList = NULL;
 
-	for (int i = -d; i < d; i++)
+	for (int i = -distanceToBeInfected; i < distanceToBeInfected; i++)
 	{
-		for (int j = -d; j < d; j++)
+		for (int j = -distanceToBeInfected; j < distanceToBeInfected; j++)
 		{
 			int r3 = rectIndex(p->position.x + j, p->position.y + i, w, l);
 			//rettangolo r2 = trovaRettangolo2(subnazioneItem, p.p.x + j, p.p.y + i, rank);
@@ -649,7 +649,7 @@ struct individualSummaryWithRank*
 	calcolaAvanzamentoContagi2(
 		struct individualSummaryWithRank* buffer,
 		struct subnation subNazioneItem, int rank,
-		int t, int d, struct arrayWithSize people,
+		int t, int distanceToBeInfected, struct arrayWithSize people,
 		struct arrayWithSize storicoContatti,
 		int w, int l, int i_t2, int subnazioneIndex, int velocity)
 {
@@ -669,7 +669,7 @@ struct individualSummaryWithRank*
 			}
 
 			if (buffer[subnazioneIndex].individualSummary.infected > 0) {
-				struct arrayWithSize r = trovaRettangolo(subNazioneItem, plist[ip], d, rank, w, l);
+				struct arrayWithSize r = trovaRettangolo(subNazioneItem, plist[ip], distanceToBeInfected, rank, w, l);
 				int* r2 = r.pList;
 				if (r.currentSize > 0) {
 					for (int i = 0, rSize = r.currentSize; i < rSize; i++) {
@@ -777,7 +777,7 @@ struct individualSummaryWithRank*
 struct individualSummaryWithRank* calcolaAvanzamentoContagi(
 	struct individualSummaryWithRank* buffer,
 	struct nation nazioneItem,
-	int rank, int t, int d,
+	int rank, int t, int distanceToBeInfected,
 	struct arrayWithSize people,
 	struct arrayWithSize storicoContatti,
 	int w, int l, int velocity)
@@ -795,7 +795,7 @@ struct individualSummaryWithRank* calcolaAvanzamentoContagi(
 
 		for (int i = 0; i < t2; i++) {
 			buffer = calcolaAvanzamentoContagi2(buffer, sb2,
-				rank, t, d, people,
+				rank, t, distanceToBeInfected, people,
 				storicoContatti, w, l, i, sbi, velocity);
 
 			//printArray(buffer, rank);
@@ -835,7 +835,7 @@ int main(int argc, char** argv) {
 	dimSubCountry.x = 5;//125;
 	dimSubCountry.y = 5;//125;
 	int timeStep = 10 * 60;
-	int d = 1;//10;
+	int distanceToBeInfected = 1;//10;
 	int velocity = 1;
 
 	if (argc < 11) {
@@ -854,8 +854,82 @@ int main(int argc, char** argv) {
 	dimSubCountry.x = atoi(argv[6]);
 	dimSubCountry.y = atoi(argv[7]);
 	timeStep = atoi(argv[8]);
-	d = atoi(argv[9]);
+	distanceToBeInfected = atoi(argv[9]);
 	velocity = atoi(argv[10]);
+
+
+	if (numPeople <= 0)
+	{
+		if (my_rank == 0)
+			printf("The number of people must be a positive number (>0) \n\n");
+
+		MPI_Finalize();
+		return;
+	}
+
+	if (numPeople < numInfected)
+	{
+		if (my_rank == 0)
+			printf("The total number of people can't be lower than total number of infected \n\n");
+
+		MPI_Finalize();
+		return;
+	}
+
+	if (dimSubCountry.x > dimWorld.x)
+	{
+		if (my_rank == 0)
+			printf("The X dimension of the subcountry can't be greater than the dimension of the world \n\n");
+
+		MPI_Finalize();
+		return;
+	}
+
+	if (dimSubCountry.y > dimWorld.y)
+	{
+		if (my_rank == 0)
+			printf("The Y dimension of the subcountry can't be greater than the dimension of the world \n\n");
+
+		MPI_Finalize();
+		return;
+	}
+
+	if (distanceToBeInfected < 0)
+	{
+		if (my_rank == 0)
+			printf("The distance to be infected must be a positive number (>=0) \n\n");
+
+		MPI_Finalize();
+		return;
+	}
+
+	if (days <= 0)
+	{
+		if (my_rank == 0)
+			printf("The days must be a positive number (>0) \n\n");
+
+		MPI_Finalize();
+		return;
+	}
+
+	if (velocity <= 0)
+	{
+		if (my_rank == 0)
+			printf("The velocity must be a positive number (>0) \n\n");
+
+		MPI_Finalize();
+		return;
+	}
+
+
+	if (timeStep <= 0)
+	{
+		if (my_rank == 0)
+			printf("The timestep must be a positive number (>0) \n\n");
+
+		MPI_Finalize();
+		return;
+	}
 
 	int subNationsNum = calculateNumSubnations(dimWorld.x, dimWorld.y, dimSubCountry.x, dimSubCountry.y);
 	int sizeOfIndividualSummaryWithRank = sizeof(struct individualSummaryWithRank);
@@ -961,7 +1035,7 @@ int main(int argc, char** argv) {
 		if (i >= 0)
 		{
 			buffer = calcolaAvanzamentoContagi(buffer, nazioneItem,
-				my_rank, timeStep, d, people, hashStoricoVar, dimSubCountry.x, dimSubCountry.y, velocity);
+				my_rank, timeStep, distanceToBeInfected, people, hashStoricoVar, dimSubCountry.x, dimSubCountry.y, velocity);
 		}
 
 		MPI_Gather(buffer, maxRectanglesPerProcess * scale, MPI_INT,
