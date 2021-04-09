@@ -51,3 +51,13 @@ Project4/vs/Debug/p4.vcxproj.FileListAbsolute.txt
 Project4/vs/.vs/p4/v16/Browse.VC.db-wal
 
 Project4/vs/.vs/p4/v16/Browse.VC.db-shm
+
+*.aux
+
+*.log
+
+*.out
+
+*.gz
+
+*.toc
