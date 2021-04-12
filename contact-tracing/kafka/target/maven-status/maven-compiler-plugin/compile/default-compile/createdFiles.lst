@@ -1,0 +1,7 @@
+it\polimi\middleware\apache\kafka\connect\connectors\MQTTSourceTask$1.class
+it\polimi\middleware\apache\kafka\connect\connectors\MQTTSourceTask.class
+it\polimi\middleware\apache\kafka\connect\producers\MainProducer.class
+it\polimi\middleware\apache\kafka\connect\connectors\MQTTSourceConnector.class
+it\polimi\middleware\apache\kafka\connect\utils\Utils.class
+it\polimi\middleware\apache\kafka\connect\consumers\AlertConsumer.class
+it\polimi\middleware\apache\kafka\connect\consumers\StoreConsumer.class

@@ -1,0 +1,6 @@
+D:\projects\Middleware\contact-tracing\kafka\src\main\java\it\polimi\middleware\apache\kafka\connect\utils\Utils.java
+D:\projects\Middleware\contact-tracing\kafka\src\main\java\it\polimi\middleware\apache\kafka\connect\connectors\MQTTSourceConnector.java
+D:\projects\Middleware\contact-tracing\kafka\src\main\java\it\polimi\middleware\apache\kafka\connect\connectors\MQTTSourceTask.java
+D:\projects\Middleware\contact-tracing\kafka\src\main\java\it\polimi\middleware\apache\kafka\connect\producers\MainProducer.java
+D:\projects\Middleware\contact-tracing\kafka\src\main\java\it\polimi\middleware\apache\kafka\connect\consumers\StoreConsumer.java
+D:\projects\Middleware\contact-tracing\kafka\src\main\java\it\polimi\middleware\apache\kafka\connect\consumers\AlertConsumer.java
