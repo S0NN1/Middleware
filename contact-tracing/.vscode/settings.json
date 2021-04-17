@@ -3,7 +3,10 @@
         "simple-udp.h": "c",
         "algorithm": "c",
         "netstack.h": "c",
-        "contiki.h": "c"
+        "contiki.h": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c"
     },
     "cSpell.enabled": true
 }

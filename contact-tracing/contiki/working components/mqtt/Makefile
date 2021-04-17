@@ -1,15 +1,13 @@
-CONTIKI_PROJECT = contact-tracing
+CONTIKI_PROJECT = mqtt-client
 all: $(CONTIKI_PROJECT)
 
 MODULES += os/net/app-layer/mqtt
-MODULES += os/services/shell
-MODULES += os/services/rpl-border-router
+
+CONTIKI = /home/sonny/contiki-ng-mw-2021
+-include $(CONTIKI)/Makefile.identify-target
+
 MODULES_REL += arch/platform/$(TARGET)
+
 PLATFORMS_ONLY = srf06-cc26xx cc2538dk openmote-cc2538 zoul native simplelink
 
-CONTIKI = /home/sonny/contiki-ng
--include $(CONTIKI)/Makefile.identify-target
 include $(CONTIKI)/Makefile.include
-
-
-
