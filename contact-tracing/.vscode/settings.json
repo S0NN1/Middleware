@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "simple-udp.h": "c",
-        "algorithm": "c",
-        "netstack.h": "c",
-        "contiki.h": "c"
-    },
-    "cSpell.enabled": true
-}

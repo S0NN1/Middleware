@@ -1,0 +1,9 @@
+#ifndef PROJECT_CONF_H_
+#define PROJECT_CONF_H_
+#define UIP_CONF_TCP 1
+#define MQTT_CLIENT_CONF_WITH_IBM_WATSON 0
+#define MQTT_CLIENT_CONF_BROKER_IP_ADDR "fd00::1"
+#define MQTT_CLIENT_CONF_ORG_ID "polimi"
+#define MQTT_CLIENT_CONF_USERNAME "mqtt-client-username"
+#define MQTT_CLIENT_CONF_AUTH_TOKEN "AUTHTOKEN"
+#endif
