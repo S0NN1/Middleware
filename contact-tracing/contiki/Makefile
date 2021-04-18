@@ -2,7 +2,6 @@ CONTIKI_PROJECT = mqtt-client
 all: $(CONTIKI_PROJECT)
 
 MODULES += os/services/shell
-MODULES += os/services/rpl-border-router
 MODULES_REL += arch/platform/$(TARGET)
 MODULES += os/net/app-layer/mqtt
 CONTIKI = /home/sonny/contiki-ng-mw-2021

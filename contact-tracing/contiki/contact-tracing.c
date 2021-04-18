@@ -117,7 +117,8 @@ typedef struct mqtt_client_config {
     int def_rt_ping_interval;
     uint16_t broker_port;
 } mqtt_client_config_t;
-
+static struct simple_udp_connection broadcast_connection,
+        broadcast_receiver_connection;
 static struct timer connection_life;
 static uint8_t connect_attempt;
 static uint8_t state;
@@ -142,7 +143,12 @@ static mqtt_client_config_t conf;
 
 
 PROCESS(mqtt_client_setup, "MQTT Client Setup");
+
 PROCESS(mqtt_client_publish, "MQTT Client Publish");
+
+PROCESS(broadcast, "Broadcast Process");
+
+PROCESS(broadcast_receiver, "Broadcast Receiver Process");
 AUTOSTART_PROCESSES(&mqtt_client_setup);
 
 
@@ -190,7 +196,6 @@ mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data) {
         case MQTT_EVENT_PUBLISH: {
             msg_ptr = data;
             //TODO PUBLISH
-            /* Implement first_flag in publish message? */
             if (msg_ptr->first_chunk) {
                 msg_ptr->first_chunk = 0;
                 LOG_DBG("Application received publish for topic '%s'. Payload "
@@ -224,7 +229,6 @@ static int
 construct_pub_topic(char *topic) {
     int len = snprintf(pub_topic, BUFFER_SIZE, "%s", topic);
 
-    /* len < 0: Error. Len >= BUFFER_SIZE: Buffer too small */
     if (len < 0 || len >= BUFFER_SIZE) {
         LOG_INFO("Pub Topic: %d, Buffer %d\n", len, BUFFER_SIZE);
         return 0;
@@ -254,7 +258,6 @@ construct_client_id(void) {
                        linkaddr_node_addr.u8[2], linkaddr_node_addr.u8[5],
                        linkaddr_node_addr.u8[6], linkaddr_node_addr.u8[7]);
 
-    /* len < 0: Error. Len >= BUFFER_SIZE: Buffer too small */
     if (len < 0 || len >= BUFFER_SIZE) {
         LOG_ERR("Client ID: %d, Buffer %d\n", len, BUFFER_SIZE);
         return 0;
@@ -266,30 +269,18 @@ construct_client_id(void) {
 static void
 update_config(void) {
     if (construct_client_id() == 0) {
-        /* Fatal error. Client ID larger than the buffer */
         LOG_ERR("State config error\n");
     }
     if (construct_sub_topic("#") == 0) {
-        /* Fatal error. Client ID larger than the buffer */
         LOG_ERR("State config error\n");
     }
-    /* Reset the counter */
     seq_nr_value = 0;
     state = STATE_INIT;
-    /*
-     * Schedule next timer event ASAP
-     *
-     * If we entered an error state then we won't do anything when it fires.
-     *
-     * Since the error at this stage is a config error, we will only exit this
-     * error state if we get a new config.
-     */
     etimer_set(&publish_periodic_timer, 0);
 }
 
 static int
 init_config() {
-    /* Populate configuration with default values */
     memset(&conf, 0, sizeof(mqtt_client_config_t));
 
     memcpy(conf.org_id, MQTT_CLIENT_ORG_ID, strlen(MQTT_CLIENT_ORG_ID));
@@ -310,7 +301,6 @@ init_config() {
 
 static void
 subscribe(char *topic) {
-    /* Publish MQTT topic in IBM quickstart format */
     mqtt_status_t status;
 
     status = mqtt_subscribe(&conn, NULL, topic, MQTT_QOS_LEVEL_0);
@@ -327,7 +317,6 @@ publish(char *topic, enum action action, char *receiver_address) {
         /* Fatal error. Topic larger than the buffer */
         printf("State Config Error");
     }
-    /* Publish MQTT topic in IBM quickstart format */
     int len;
     int remaining = APP_BUFFER_SIZE;
     seq_nr_value++;
@@ -377,7 +366,6 @@ publish(char *topic, enum action action, char *receiver_address) {
 
 static void
 connect_to_broker(void) {
-    /* Connect to MQTT server */
     mqtt_connect(&conn, conf.broker_ip, conf.broker_port,
                  conf.pub_interval * 3);
 
@@ -401,10 +389,6 @@ state_machine(void) {
             /* If we have just been configured register MQTT connection */
             mqtt_register(&conn, &mqtt_client_setup, client_id, mqtt_event,
                           MAX_TCP_SEGMENT_SIZE);
-            /*
-             * If we are not using the quickstart service (thus we are an IBM
-             * registered device), we need to provide user name and password
-             */
             if (strncasecmp(conf.org_id, QUICKSTART, strlen(conf.org_id)) != 0) {
                 if (strlen(conf.auth_token) == 0) {
                     LOG_ERR("User name set, but empty auth token\n");
@@ -415,7 +399,6 @@ state_machine(void) {
                                                conf.auth_token);
                 }
             }
-            /* _register() will set auto_reconnect. We don't want that. */
             conn.auto_reconnect = 0;
             connect_attempt = 1;
             state = STATE_REGISTERED;
@@ -423,7 +406,6 @@ state_machine(void) {
             /* Continue */
         case STATE_REGISTERED:
             if (uip_ds6_get_global(ADDR_PREFERRED) != NULL) {
-                /* Registered and with a public IP. Connect */
                 LOG_DBG("Registered. Connect attempt %u\n", connect_attempt);
                 ping_parent();
                 connect_to_broker();
@@ -432,17 +414,16 @@ state_machine(void) {
             return;
             break;
         case STATE_CONNECTING:
-            /* Not connected yet. Wait */
             LOG_DBG("Connecting (%u)\n", connect_attempt);
             break;
         case STATE_CONNECTED:
-            /* Don't subscribe unless we are a registered device */
             if (strncasecmp(conf.org_id, QUICKSTART, strlen(conf.org_id)) == 0) {
                 LOG_DBG("Using 'quickstart': Skipping subscribe\n");
                 state = STATE_PUBLISHING;
             }
             process_start(&mqtt_client_publish, NULL);
-            /* Continue */
+            process_start(&broadcast, NULL);
+            process_start(&broadcast_receiver, NULL);
         case STATE_DISCONNECTED:
             LOG_DBG("Disconnected\n");
             if (connect_attempt < RECONNECT_ATTEMPTS ||
@@ -462,105 +443,130 @@ state_machine(void) {
                 state = STATE_REGISTERED;
                 return;
             } else {
-                /* Max reconnect attempts reached. Enter error state */
                 state = STATE_ERROR;
                 LOG_DBG("Aborting connection after %u attempts\n", connect_attempt - 1);
             }
             break;
         case STATE_CONFIG_ERROR:
-            /* Idle away. The only way out is a new config */
             LOG_ERR("Bad configuration.\n");
             return;
         case STATE_ERROR:
         default:
-            /*
-             * 'default' should never happen.
-             *
-             * If we enter here it's because of some error. Stop timers. The only thing
-             * that can bring us out is a new config event
-             */
             LOG_ERR("Default case: State=0x%02x\n", state);
             return;
     }
 
-    /* If we didn't return so far, reschedule ourselves */
     etimer_set(&publish_periodic_timer, STATE_MACHINE_PERIODIC);
+}
+/* SIMPLE UDP FUNCTIONS*/
+static void broadcast_callback(struct simple_udp_connection *c,
+                               const uip_ipaddr_t *sender_addr,
+                               uint16_t sender_port,
+                               const uip_ipaddr_t *receiver_addr,
+                               uint16_t receiver_port, const uint8_t *data,
+                               uint16_t datalen) {
+    printf("kek");
+}
+
+static void broadcast_receiver_callback(struct simple_udp_connection *c,
+                                        const uip_ipaddr_t *sender_addr,
+                                        uint16_t sender_port,
+                                        const uip_ipaddr_t *receiver_addr,
+                                        uint16_t receiver_port,
+                                        const uint8_t *data, uint16_t datalen) {
+    printf("%s", data);
+}
+
+PROCESS_THREAD(broadcast, ev, data) {
+    static struct etimer et;
+    uip_ipaddr_t addr;
+    PROCESS_BEGIN();
+                etimer_set(&et, CLOCK_SECOND*10);
+
+                simple_udp_register(&broadcast_connection, 1234, NULL, 1900,
+                                    broadcast_callback);
+                while (1) {
+                    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+
+                    printf("\nSending broadcast\n");
+                    uip_create_linklocal_allnodes_mcast(&addr);
+                    simple_udp_sendto(&broadcast_connection, client_id, strlen(client_id), &addr);
+                    etimer_reset(&et);
+                }
+
+    PROCESS_END();
+}
+
+PROCESS_THREAD(broadcast_receiver, ev, data) {
+    PROCESS_BEGIN();
+                simple_udp_register(&broadcast_receiver_connection, 1900, NULL, 1234,
+                                    broadcast_receiver_callback);
+
+                while (1) {
+                    PROCESS_WAIT_EVENT();
+                }
+
+    PROCESS_END();
 }
 
 PROCESS_THREAD(mqtt_client_setup, ev, data) {
 
-PROCESS_BEGIN();
+    PROCESS_BEGIN();
 
-printf("MQTT Client Process\n");
+                printf("MQTT Client Process\n");
 
-if (init_config() != 1) {
-PROCESS_EXIT();
-}
-update_config();
-def_rt_rssi = 0x8000000;
-uip_icmp6_echo_reply_callback_add(&echo_reply_notification,
-echo_reply_handler);
-etimer_set(&echo_request_timer, conf.def_rt_ping_interval);
-/* Main loop */
-while (1) {
+                if (init_config() != 1) {
+                    PROCESS_EXIT();
+                }
+                update_config();
+                def_rt_rssi = 0x8000000;
+                uip_icmp6_echo_reply_callback_add(&echo_reply_notification,
+                                                  echo_reply_handler);
+                etimer_set(&echo_request_timer, conf.def_rt_ping_interval);
+                while (1) {
 
-PROCESS_YIELD();
+                    PROCESS_YIELD();
 
-if ((ev == PROCESS_EVENT_TIMER && data == &publish_periodic_timer) ||
-ev == PROCESS_EVENT_POLL) {
-state_machine();
-}
+                    if ((ev == PROCESS_EVENT_TIMER && data == &publish_periodic_timer) ||
+                        ev == PROCESS_EVENT_POLL) {
+                        state_machine();
+                    }
 
-if (ev == PROCESS_EVENT_TIMER && data == &echo_request_timer) {
-ping_parent();
-etimer_set(&echo_request_timer, conf.def_rt_ping_interval);
-}
-}
+                    if (ev == PROCESS_EVENT_TIMER && data == &echo_request_timer) {
+                        ping_parent();
+                        etimer_set(&echo_request_timer, conf.def_rt_ping_interval);
+                    }
+                }
 
-PROCESS_END();
+    PROCESS_END();
 }
 
 PROCESS_THREAD(mqtt_client_publish, ev, data) {
-PROCESS_BEGIN();
-if (state == STATE_PUBLISHING) {
-/* If the timer expired, the connection is stable. */
-if (timer_expired(&connection_life)) {
-/*
- * Intentionally using 0 here instead of 1: We want RECONNECT_ATTEMPTS
- * attempts if we disconnect after a successful connect
- */
-connect_attempt = 0;
+    PROCESS_BEGIN();
+                if (state == STATE_PUBLISHING) {
+                    if (timer_expired(&connection_life)) {
+                        connect_attempt = 0;
+                    }
+
+                    if (mqtt_ready(&conn) && conn.out_buffer_sent) {
+                        if (state == STATE_CONNECTED) {
+                            subscribe("#");
+                            PROCESS_YIELD();
+                            if (ev == PROCESS_EVENT_TIMER && data == &connection_to_kafka_timer) {
+                                publish("motes-connections", CONNECTION, "192.168.1.1");
+                                LOG_DBG("Publishing connection \n");
+                            } else if ((ev == PROCESS_EVENT_TIMER && data == &alert_to_kafka_timer)) {
+                                publish("motes-connections", ALERT, "192.168.1.1");
+                            }
+                        }
+                        etimer_set(&publish_periodic_timer, conf.pub_interval);
+                    } else {
+                        LOG_DBG("Publishing... (MQTT state=%d, q=%u)\n", conn.state,
+                                conn.out_queue_full);
+                    }
+                    break;
+                }
+
+    PROCESS_END();
 }
 
-if (mqtt_ready(&conn) && conn.out_buffer_sent) {
-/* Connected. Publish */
-if (state == STATE_CONNECTED) {
-subscribe("#");
-PROCESS_YIELD();
-if (ev == PROCESS_EVENT_TIMER && data == &connection_to_kafka_timer) {
-publish("motes-connections", CONNECTION, "192.168.1.1");
-LOG_DBG("Publishing connection \n");
-} else if ((ev == PROCESS_EVENT_TIMER && data == &alert_to_kafka_timer)) {
-publish("motes-connections", ALERT, "192.168.1.1");
-}
-}
-etimer_set(&publish_periodic_timer, conf.pub_interval);
-/* Return here so we don't end up rescheduling the timer */
-} else {
-/*
- * Our publish timer fired, but some MQTT packet is already in flight
- * (either not sent at all, or sent but not fully ACKd).
- *
- * This can mean that we have lost connectivity to our broker or that
- * simply there is some network delay. In both cases, we refuse to
- * trigger a new message and we wait for TCP to either ACK the entire
- * packet after retries, or to timeout and notify us.
- */
-LOG_DBG("Publishing... (MQTT state=%d, q=%u)\n", conn.state,
-conn.out_queue_full);
-}
-break;
-}
-
-PROCESS_END();
-}
