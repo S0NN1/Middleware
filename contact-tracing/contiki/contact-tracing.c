@@ -208,6 +208,8 @@ static const char *broker_ip = MQTT_CLIENT_BROKER_IP_ADDR;
 
 #define BUFFER_SIZE 64
 
+#define PUBLISH_BUFFER_SIZE 150
+
 #define APP_BUFFER_SIZE 512
 
 #define QUICKSTART "quickstart"
@@ -282,6 +284,8 @@ static struct etimer alert_to_kafka_timer;
 static int def_rt_rssi = 0;
 
 static mqtt_client_config_t conf;
+
+static char message_to_publish[PUBLISH_BUFFER_SIZE];
 
 
 
@@ -627,7 +631,7 @@ subscribe(char *topic) {
 
 static void
 
-publish(char *topic, enum action action, char *receiver_address) {
+publish(char *topic, enum action action, char *sender_client_id) {
 
     if (construct_pub_topic(topic) == 0) {
 
@@ -659,9 +663,9 @@ publish(char *topic, enum action action, char *receiver_address) {
 
                        "\"ClientId\":\"%s\","
 
-                       "\"IpAddressMote\":\"%s\","
+                       "\"SenderClientId\":\"%s\","
 
-                       "\"Seq\":%d,", event_type, client_id, receiver_address,
+                       "\"Seq\":%d,", event_type, client_id, sender_client_id,
 
                        seq_nr_value);
 
@@ -848,6 +852,8 @@ state_machine(void) {
 
                 state = STATE_PUBLISHING;
 
+            } else {
+                state = STATE_PUBLISHING;
             }
 
             process_start(&mqtt_client_publish, NULL);
@@ -940,7 +946,6 @@ static void broadcast_callback(struct simple_udp_connection *c,
                                uint16_t datalen) {
 
 	printf("\n\nCALLBACK\n\n");
-
 }
 
 
@@ -957,9 +962,9 @@ static void broadcast_receiver_callback(struct simple_udp_connection *c,
 
                                         const uint8_t *data, uint16_t datalen) {
 
-    printf("%s", data);
+    snprintf(message_to_publish,  PUBLISH_BUFFER_SIZE, "%s", data);
+    printf("\nReceived %s\n", data);
     etimer_set(&connection_to_kafka_timer, CLOCK_SECOND*2);
-
 }
 
 
@@ -1095,9 +1100,9 @@ PROCESS_THREAD(mqtt_client_setup, ev, data) {
 PROCESS_THREAD(mqtt_client_publish, ev, data) {
 
     PROCESS_BEGIN();
-
+                printf("\nSONO DENTRO AL PUBLISHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH\n");
                 if (state == STATE_PUBLISHING) {
-
+                    printf("\nMA CHE OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\n");
                     if (timer_expired(&connection_life)) {
 
                         connect_attempt = 0;
@@ -1108,7 +1113,7 @@ PROCESS_THREAD(mqtt_client_publish, ev, data) {
 
                     if (mqtt_ready(&conn) && conn.out_buffer_sent) {
 
-                        if (state == STATE_CONNECTED) {
+                        if (state == STATE_PUBLISHING) {
 
                             subscribe("#");
 
@@ -1116,15 +1121,12 @@ PROCESS_THREAD(mqtt_client_publish, ev, data) {
 
                             if (ev == PROCESS_EVENT_TIMER && data == &connection_to_kafka_timer) {
 
-                                publish("motes-connections", CONNECTION, "192.168.1.1");
+                                publish("motes-connections", CONNECTION, message_to_publish);
 
                                 printf("\n\n\n\n\n\n\nPublishing connection \n\n\n\n\n\n\n\n\n");
 
                             } else if ((ev == PROCESS_EVENT_TIMER && data == &alert_to_kafka_timer)) {
-
-                                publish("motes-connections", ALERT, "192.168.1.1");
-				printf("\n\n\n\n\n\n\nPublishing allllert \n\n\n\n\n\n\n\n\n");
-
+                                publish("motes-connections", ALERT, "PROVA");
                             }
 
                         }
