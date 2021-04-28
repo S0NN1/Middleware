@@ -9,6 +9,6 @@ CONTIKI = /home/sonny/contiki-ng
 
 MODULES_REL += arch/platform/$(TARGET)
 
-PLATFORMS_ONLY = srf06-cc26xx cc2538dk openmote-cc2538 zoul native simplelink cooja
+PLATFORMS_ONLY = native cooja
 
 include $(CONTIKI)/Makefile.include
