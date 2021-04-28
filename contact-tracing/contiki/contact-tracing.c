@@ -38,13 +38,24 @@
 #define MQTT_BROKER_PORT 1883
 
 //MQTT topics
-#define MQTT_INFECTION_TOPIC "#"
+#define MQTT_INFECTION_TOPIC "kafka-to-mqtt-alert"
+#define MQTT_CONNECTION_TOPIC "motes-connections"
 
 //Buffer sizes
 #define MAX_TCP_SEGMENT_SIZE    32
 #define BUFFER_SIZE 64
 #define APP_BUFFER_SIZE 512
 #define ECHO_REQ_PAYLOAD_LEN 20
+#define MAX_QUEUE_SIZE 100
+
+//Intervals
+#define  PERIODIC_PUBLISH_INTERVAL 60*CLOCK_SECOND
+#define BROADCAST_INTERVAL 35*CLOCK_SECOND
+#define MQTT_KEEP_ALIVE_INTERVAL 30
+
+//UDP Ports
+#define SENDER_UDP_PORT 8765
+#define RECEIVER_UDP_PORT 5678
 
 enum action {
     CONNECTION, ALERT
@@ -79,7 +90,7 @@ static struct etimer mqtt_register_timer;
 static struct etimer broadcast_timer;
 
 //Queue buffer for MQTT
-char *message_to_publish[100][100];
+char *message_to_publish[MAX_QUEUE_SIZE][MAX_QUEUE_SIZE];
 int messages_length = 0;
 
 //Other stuff
@@ -88,6 +99,7 @@ static uint16_t seq_nr_value = 0;
 static int def_rt_rssi = 0;
 static mutex_t mqtt_mutex;
 static int buffer_index = 0;
+static enum mqtt_action mqtt_action_ptr = NA;
 
 //PROCESSES
 PROCESS(mqtt_client_process, "MQTT Client Main Process");
@@ -137,8 +149,6 @@ void send_to_mqtt_broker(char *message, char *action) {
     seq_nr_value++;
     buf_ptr = app_buffer;
     event_type = action;
-    printf("\n\n\nMessage: %s", message);
-    printf("\nAction: %s\n\n\n", action);
     if (strcmp(action, "CONNECTION") == 0) {
         len = snprintf(buf_ptr, 500,
                        "{"
@@ -156,7 +166,7 @@ void send_to_mqtt_broker(char *message, char *action) {
                        seq_nr_value);
     }
     if (len < 0 || len >= remaining) {
-        printf("Buffer too short. Have %d, need %d + \\0\n", remaining, len);
+        LOG_WARN("Buffer too short. Have %d, need %d + \\0\n", remaining, len);
         return;
     }
     remaining -= len;
@@ -166,7 +176,7 @@ void send_to_mqtt_broker(char *message, char *action) {
         LOG_ERR("Buffer too short. Have %d, need %d + \\0\n", remaining, len);
         return;
     }
-    printf("\n\n\nApp Buffer: %s\n\n\n", app_buffer);
+    LOG_DBG("App Buffer: %s\n", app_buffer);
     mqtt_publish(&conn, NULL, pub_topic, (uint8_t *) app_buffer, strlen(app_buffer), MQTT_QOS_LEVEL_1, MQTT_RETAIN_OFF);
     LOG_DBG("Publish!\n");
 }
@@ -179,6 +189,7 @@ static void clear_mqtt_buffer() {
         if (mutex_try_lock(&mqtt_mutex)) {
             for (int i = 0; i < messages_length; ++i) {
                 free(message_to_publish[i][0]);
+                //message_to_publish[i][0] = NULL;
                 message_to_publish[i][1] = NULL;
             }
             messages_length = 0;
@@ -189,36 +200,21 @@ static void clear_mqtt_buffer() {
 }
 
 
-static char *enum_to_string(enum mqtt_action kek) {
-    if (kek == NA) {
-        return "NA";
-    } else if (kek == FIRE_PUBLISH) {
-        return "FIRE_PUBLISH";
-    } else if (kek == END_PUBLISH) {
-        return "END_PUBLISH";
-    } else {
-        return "PAPOPEPO";
-    }
-}
-
-static enum mqtt_action mqtt_action_ptr = NA;
-
 static void publish(char *topic) {
     if (construct_pub_topic(topic) == 0) {
-        printf("State Config Error");
+        LOG_ERR("State Config Error");
     }
-    printf("\nPRIMA PUBLISH\n\n");
+    LOG_DBG("First Publish\n");
     if (message_to_publish[buffer_index][0] == NULL || buffer_index >= messages_length) {
         LOG_DBG("Empty buffer, skipping publish\n");
         mqtt_action_ptr = END_PUBLISH;
-        ctimer_set(&mqtt_callback_timer, 0 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
+        ctimer_set(&mqtt_callback_timer, 1 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
         return;
     }
     send_to_mqtt_broker(message_to_publish[buffer_index][0], "CONNECTION");
 }
 
 static void mqtt_callback(void *ptr) {
-    printf("\n\nEnum: %s\n", enum_to_string(mqtt_action_ptr));
     switch ((*(enum mqtt_action *) ptr)) {
         case SUBSCRIBE:
             if (mqtt_ready(&conn) && conn.out_buffer_sent) {
@@ -229,8 +225,7 @@ static void mqtt_callback(void *ptr) {
             break;
         case FIRE_PUBLISH:
             if (mutex_try_lock(&mqtt_mutex)) {
-                publish("motes-connections");
-                printf("\nBuffer index: %d\n", buffer_index);
+                publish(MQTT_CONNECTION_TOPIC);
             } else {
                 ctimer_reset(&mqtt_callback_timer);
             }
@@ -239,22 +234,20 @@ static void mqtt_callback(void *ptr) {
             if (message_to_publish[buffer_index][0] == NULL || buffer_index >= messages_length) {
                 LOG_DBG("Empty buffer, skipping publish\n");
                 mqtt_action_ptr = END_PUBLISH;
-                ctimer_set(&mqtt_callback_timer, 0 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
+                ctimer_set(&mqtt_callback_timer, 1 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
                 break;
             }
             send_to_mqtt_broker(message_to_publish[buffer_index][0], "CONNECTION");
-            printf("\nBuffer index: %d\n", buffer_index);
             break;
         case END_PUBLISH:
             mutex_unlock(&mqtt_mutex);
             clear_mqtt_buffer();
             mqtt_action_ptr = FIRE_PUBLISH;
             buffer_index = 0;
-            ctimer_set(&mqtt_callback_timer, 10 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
+            ctimer_set(&mqtt_callback_timer, PERIODIC_PUBLISH_INTERVAL, mqtt_callback, &mqtt_action_ptr);
             break;
 
         default:
-            printf("NON SONO NELLA SUBSCRIBE\n\n");
             break;
     }
 }
@@ -265,7 +258,7 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
     switch (event) {
         case MQTT_EVENT_CONNECTED: {
             mqtt_action_ptr = SUBSCRIBE;
-            ctimer_set(&mqtt_callback_timer, 0 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
+            ctimer_set(&mqtt_callback_timer, 1 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
             LOG_DBG("Application has a MQTT connection\n");
             break;
         }
@@ -289,7 +282,7 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
         case MQTT_EVENT_SUBACK: {
             mqtt_action_ptr = FIRE_PUBLISH;
             buffer_index = 0;
-            ctimer_set(&mqtt_callback_timer, 0 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
+            ctimer_set(&mqtt_callback_timer, 1 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
             LOG_DBG("Application is subscribed to topic successfully\n");
             break;
         }
@@ -300,7 +293,7 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
         case MQTT_EVENT_PUBACK: {
             mqtt_action_ptr = CONTINUE_PUBLISH;
             buffer_index++;
-            ctimer_set(&mqtt_callback_timer, 0 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
+            ctimer_set(&mqtt_callback_timer, 1 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
             LOG_DBG("Publishing complete.\n");
             break;
         }
@@ -313,11 +306,9 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
 
 //Update config
 static void update_config(void) {
-    //TODO BUFFER 33
     snprintf(client_id, BUFFER_SIZE, "d:%s:%s:%02x%02x%02x%02x%02x%02x", MQTT_CLIENT_ORG_ID, MQTT_CLIENT_TYPE_ID,
              linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1], linkaddr_node_addr.u8[2], linkaddr_node_addr.u8[5],
              linkaddr_node_addr.u8[6], linkaddr_node_addr.u8[7]);
-    //TODO BUFFER 19
     snprintf(sub_topic, BUFFER_SIZE, "%s", "#");
     seq_nr_value = 0;
 }
@@ -327,16 +318,9 @@ static void update_config(void) {
 static void insert_mqtt_buffer(char *message, char *action) {
     while (true) {
         if (mutex_try_lock(&mqtt_mutex)) {
-            printf("\n\nHo preso il lock per inserire\n\n");
-            printf("\nStampo il buffer");
-            for (int i = 0; i <= messages_length; ++i) {
-                printf("\n%s", message_to_publish[i][0]);
-            }
-            for (int i = 0; i <= messages_length; ++i) {
-                printf("\nConfronto %s con %s", message, message_to_publish[i][0]);
+            for (int i = 0; i < messages_length; ++i) {
                 if (message_to_publish[i][0] != NULL && strcmp(message, message_to_publish[i][0]) == 0) {
                     mutex_unlock(&mqtt_mutex);
-                    printf("\nEsco\n");
                     return;
                 }
             }
@@ -344,11 +328,6 @@ static void insert_mqtt_buffer(char *message, char *action) {
             message_to_publish[messages_length][1] = action;
             messages_length++;
             mutex_unlock(&mqtt_mutex);
-            printf("\nStampo il buffer");
-            for (int i = 0; i <= messages_length; ++i) {
-                printf("\n%s", message_to_publish[i][0]);
-            }
-            printf("\n\nHo rilasciato il lock per inserire\n\n");
             break;
         }
     }
@@ -376,7 +355,7 @@ static void broadcast_receiver_callback(struct simple_udp_connection *c, const u
                                         const uint8_t *data,
                                         uint16_t datalen) {
     insert_mqtt_buffer((char *) data, "CONNECTION");
-    printf("\nReceived %s\n", data);
+    LOG_DBG("Received %s\n", data);
 }
 
 
@@ -384,16 +363,16 @@ static void broadcast_receiver_callback(struct simple_udp_connection *c, const u
 PROCESS_THREAD(broadcast, ev, data) {
     uip_ipaddr_t addr;
     PROCESS_BEGIN();
-                etimer_set(&broadcast_timer, CLOCK_SECOND * 20);
-                simple_udp_register(&broadcast_connection, 8765, NULL, 5678, broadcast_callback);
+                etimer_set(&broadcast_timer, BROADCAST_INTERVAL);
+                simple_udp_register(&broadcast_connection, SENDER_UDP_PORT, NULL, RECEIVER_UDP_PORT, broadcast_callback);
 
                 while (1) {
                     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&broadcast_timer));
-                    printf("\nSending broadcast\n");
+                    LOG_DBG("Sending broadcast\n");
                     uip_create_linklocal_allnodes_mcast(&addr);
                     simple_udp_sendto(&broadcast_connection, client_id, strlen(client_id), &addr);
-                    etimer_set(&broadcast_timer, CLOCK_SECOND * 20);
-                    printf("Broadcast sent");
+                    etimer_reset(&broadcast_timer);
+                    LOG_DBG("Broadcast sent\n");
                 }
     PROCESS_END();
 }
@@ -401,20 +380,15 @@ PROCESS_THREAD(broadcast, ev, data) {
 //Broadcast receiver PROCESS
 PROCESS_THREAD(broadcast_receiver, ev, data) {
     PROCESS_BEGIN();
-                simple_udp_register(&broadcast_receiver_connection, 5678, NULL, 8765,
+                simple_udp_register(&broadcast_receiver_connection, RECEIVER_UDP_PORT, NULL, SENDER_UDP_PORT,
                                     broadcast_receiver_callback);
-                while (1) {
-                    PROCESS_WAIT_EVENT();
-                }
+
     PROCESS_END();
 }
 
 PROCESS_THREAD(mqtt_client_process, ev, data) {
-    //TODO CONTROLLARE TIMER 0
-    //TODO ASSEGNAZIONI PTR
-    //TODO TIMER BROADCAST
     PROCESS_BEGIN();
-                LOG_DBG("\n\nMQTT Client Main Process\n");
+                LOG_DBG("MQTT Client Main Process\n");
                 update_config();
                 def_rt_rssi = 0x8000000;
                 uip_icmp6_echo_reply_callback_add(&echo_reply_notification, echo_reply_handler);
@@ -441,7 +415,7 @@ PROCESS_THREAD(mqtt_client_process, ev, data) {
                             } else if (data == &mqtt_connect_timer) {
                                 if (have_connectivity()) {
                                     mqtt_connect(&conn, MQTT_BROKER_IP, MQTT_BROKER_PORT,
-                                                 30, MQTT_CLEAN_SESSION_ON);
+                                                 MQTT_KEEP_ALIVE_INTERVAL, MQTT_CLEAN_SESSION_ON);
                                 } else {
                                     etimer_reset(&mqtt_connect_timer);
                                 }
@@ -451,8 +425,6 @@ PROCESS_THREAD(mqtt_client_process, ev, data) {
                             etimer_reset(&mqtt_connect_timer);
                             break;
                         default:
-                            printf("NO PROCESS TYPE FOUND\n\n");
-                            //publish("motes-connections");
                             break;
                     }
                 }
