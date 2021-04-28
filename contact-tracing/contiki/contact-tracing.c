@@ -392,7 +392,7 @@ PROCESS_THREAD(broadcast, ev, data) {
                     printf("\nSending broadcast\n");
                     uip_create_linklocal_allnodes_mcast(&addr);
                     simple_udp_sendto(&broadcast_connection, client_id, strlen(client_id), &addr);
-                    etimer_reset(&broadcast_timer);
+                    etimer_set(&broadcast_timer, CLOCK_SECOND * 20);
                     printf("Broadcast sent");
                 }
     PROCESS_END();
@@ -410,6 +410,9 @@ PROCESS_THREAD(broadcast_receiver, ev, data) {
 }
 
 PROCESS_THREAD(mqtt_client_process, ev, data) {
+    //TODO CONTROLLARE TIMER 0
+    //TODO ASSEGNAZIONI PTR
+    //TODO TIMER BROADCAST
     PROCESS_BEGIN();
                 LOG_DBG("\n\nMQTT Client Main Process\n");
                 update_config();
@@ -431,7 +434,6 @@ PROCESS_THREAD(mqtt_client_process, ev, data) {
                                     uip_icmp6_send(uip_ds6_defrt_choose(), ICMP6_ECHO_REQUEST, 0,
                                                    ECHO_REQ_PAYLOAD_LEN);
                                     etimer_set(&mqtt_connect_timer, 2 * CLOCK_SECOND);
-
                                 } else {
                                     etimer_set(&ping_parent_timer, 3 * CLOCK_SECOND);
                                     LOG_WARN("Connecting...\n");
