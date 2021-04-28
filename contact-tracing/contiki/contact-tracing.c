@@ -224,10 +224,12 @@ static void mqtt_callback(void *ptr) {
             }
             break;
         case FIRE_PUBLISH:
+            LOG_DBG("SONO ON FIRE\n");
             if (mutex_try_lock(&mqtt_mutex)) {
                 publish(MQTT_CONNECTION_TOPIC);
             } else {
                 ctimer_reset(&mqtt_callback_timer);
+                LOG_DBG("NON HO IL MUTEX RESETTO\n");
             }
             break;
         case CONTINUE_PUBLISH:
