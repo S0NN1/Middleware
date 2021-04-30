@@ -81,7 +81,6 @@ static struct uip_icmp6_echo_reply_notification echo_reply_notification;
 static struct ctimer mqtt_callback_timer;
 //MQTT timers
 static struct etimer mqtt_connect_timer;
-//static struct etimer mqtt_connected_timer;
 static struct etimer ping_parent_timer;
 static struct etimer mqtt_register_timer;
 
@@ -184,18 +183,12 @@ static void mqtt_callback(void *ptr);
 
 //Clear MQTT buffer by assigning each action to NULL and freeing messages
 static void clear_mqtt_buffer() {
-    //while (true) {
-        //if (mutex_try_lock(&mqtt_mutex)) {
-            for (int i = 0; i < messages_length; ++i) {
-                free(message_to_publish[i][0]);
-                //message_to_publish[i][0] = NULL;
-                message_to_publish[i][1] = NULL;
-            }
-            messages_length = 0;
-            //mutex_unlock(&mqtt_mutex);
-           // break;
-      //  }
-    //}
+    for (int i = 0; i < messages_length; ++i) {
+        free(message_to_publish[i][0]);
+        //message_to_publish[i][0] = NULL;
+        message_to_publish[i][1] = NULL;
+    }
+    messages_length = 0;
 }
 
 
@@ -317,26 +310,22 @@ static void update_config(void) {
 
 //Insert into queue
 static void insert_mqtt_buffer(char *message, char *action) {
-    //while (true) {
-        if (mutex_try_lock(&mqtt_mutex)) {
-            for (int i = 0; i < messages_length; ++i) {
-                if (message_to_publish[i][0] != NULL && strcmp(message, message_to_publish[i][0]) == 0) {
-                    mutex_unlock(&mqtt_mutex);
-                    return;
-                }
+    if (mutex_try_lock(&mqtt_mutex)) {
+        for (int i = 0; i < messages_length; ++i) {
+            if (message_to_publish[i][0] != NULL && strcmp(message, message_to_publish[i][0]) == 0) {
+                mutex_unlock(&mqtt_mutex);
+                return;
             }
-            message_to_publish[messages_length][0] = strdup(message);
-            message_to_publish[messages_length][1] = action;
-            messages_length++;
-            mutex_unlock(&mqtt_mutex);
-            //break;
-	    return;
         }
-	else {
-		LOG_DBG("SKIPPO NON HO IL MUTEX\n");
-		return;
-}
-    //}
+        message_to_publish[messages_length][0] = strdup(message);
+        message_to_publish[messages_length][1] = action;
+        messages_length++;
+        mutex_unlock(&mqtt_mutex);
+        return;
+    } else {
+        LOG_DBG("SKIPPO NON HO IL MUTEX\n");
+        return;
+    }
 }
 
 
@@ -370,7 +359,8 @@ PROCESS_THREAD(broadcast, ev, data) {
     uip_ipaddr_t addr;
     PROCESS_BEGIN();
                 etimer_set(&broadcast_timer, BROADCAST_INTERVAL);
-                simple_udp_register(&broadcast_connection, SENDER_UDP_PORT, NULL, RECEIVER_UDP_PORT, broadcast_callback);
+                simple_udp_register(&broadcast_connection, SENDER_UDP_PORT, NULL, RECEIVER_UDP_PORT,
+                                    broadcast_callback);
 
                 while (1) {
                     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&broadcast_timer));
