@@ -108,21 +108,21 @@ public class Main {
                  0
         );
 
-        nazione nazioneItem = null;
+        nazione nationItem = null;
         
         if (my_rank != 0 || true) //todo: remove "|| true"
         {
-            nazioneItem = GeneraMappa(my_rank, howManySubNationsPerProcess, w, l, start);
+            nationItem = GeneraMappa(my_rank, howManySubNationsPerProcess, w, l, start);
         }
 
 
-        ArrayList<person> people = getPeople(nazioneItem);
+        ArrayList<person> people = getPeople(nationItem);
         Dictionary<person, ArrayList<vicinanza>> storicoContatti = new Hashtable<>();
 
         for (int i=0; i<days; i++)
         {
             if (my_rank != 0 || true) { //todo: remove "|| true"
-                buffer2=  calcolaAvanzamentoContagi(buffer, buffer2, nazioneItem,
+                buffer2=  calcolaAvanzamentoContagi(buffer, buffer2, nationItem,
                         my_rank, t, d, people, storicoContatti,w,l);
             }
 
@@ -163,9 +163,9 @@ public class Main {
         System.out.println(i2.rank + ": INFETTI " + i2.infetti + ", SANI " + i2.sani);
     }
 
-    private static ArrayList<person> getPeople(nazione nazioneItem) {
+    private static ArrayList<person> getPeople(nazione nationItem) {
         var people = new ArrayList<person>();
-        for (subnazione i : nazioneItem.subnazioneArrayList) {
+        for (subnazione i : nationItem.subnazioneArrayList) {
             people.addAll(i.people);
         }
 
@@ -262,7 +262,7 @@ public class Main {
 
     private static individualSummary[][] calcolaAvanzamentoContagi(
                 individualSummary[][] buffer,
-                individualSummary[][] buffer2, nazione nazioneItem,
+                individualSummary[][] buffer2, nazione nationItem,
                 int rank, int t, int d,
                 ArrayList<person> people,
                 Dictionary<person, ArrayList<vicinanza>> storicoContatti,
@@ -276,7 +276,7 @@ public class Main {
 
         int t2 = 60*60*24 / t;
 
-        ArrayList<subnazione> subnazioneArrayList = GetSubnazioni(nazioneItem, rank);
+        ArrayList<subnazione> subnazioneArrayList = GetSubnazioni(nationItem, rank);
         for (int sbi = 0; sbi< subnazioneArrayList.size(); sbi++) {
             var sb2 = subnazioneArrayList.get(sbi);
 
@@ -298,9 +298,9 @@ public class Main {
         return buffer;
     }
 
-    private static ArrayList<subnazione> GetSubnazioni(nazione nazioneItem, int rank) {
+    private static ArrayList<subnazione> GetSubnazioni(nazione nationItem, int rank) {
         ArrayList<subnazione> r = new ArrayList<>();
-        for (var i : nazioneItem.subnazioneArrayList)
+        for (var i : nationItem.subnazioneArrayList)
         {
             if (i.rank == rank)
                 r.add(i);
@@ -421,14 +421,14 @@ public class Main {
         return buffer;
     }
 
-    private static ArrayList<person> getPeopleNear(int rectIndex, subnazione subnazioneItem, int w, int l) {
+    private static ArrayList<person> getPeopleNear(int rectIndex, subnazione subnationItem, int w, int l) {
         ArrayList<person> r = new ArrayList<>();
 
         point p = new point();
         p.x = rectIndex / w;
         p.y = rectIndex % l;
 
-        for (var x : subnazioneItem.people){
+        for (var x : subnationItem.people){
             if (x.p.equals(p))
             {
                 r.add(x);
@@ -454,7 +454,7 @@ public class Main {
         return null;
     }
 
-    private static ArrayList<Integer> trovaRettangolo(subnazione subnazioneItem,
+    private static ArrayList<Integer> trovaRettangolo(subnazione subnationItem,
                                                          person p, int d, int rank, int w, int l) {
         ArrayList<Integer> r = new ArrayList<>();
         for (int i=-d; i<d; i++)
@@ -462,8 +462,8 @@ public class Main {
             for (int j=-d; j<d; j++)
             {
                 int r3 = rectIndex(p.p.x + j, p.p.y + i, w,l);
-                //rettangolo r2 = trovaRettangolo2(subnazioneItem, p.p.x + j, p.p.y + i, rank);
-                if (r3 >=0 && r3<subnazioneItem.nRettangoli)
+                //rettangolo r2 = trovaRettangolo2(subnationItem, p.p.x + j, p.p.y + i, rank);
+                if (r3 >=0 && r3<subnationItem.nRettangoli)
                 {
                     r.add(r3);
                 }
