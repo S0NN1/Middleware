@@ -20,7 +20,6 @@
 #include "sys/etimer.h"
 #include "mqtt-client.h"
 #include <string.h>
-#include <strings.h>
 #include <stdio.h>
 
 //LOG_LEVEL prints LOG messages, currently on DEBUG mode
@@ -155,14 +154,14 @@ void send_to_mqtt_broker(char *message, char *action) {
                        "\"EventType\":\"%s\","
                        "\"ClientId\":\"%s\","
                        "\"SenderClientId\":\"%s\","
-                       "\"Seq\":%d,", event_type, client_id, message,
+                       "\"Seq\":%d", event_type, client_id, message,
                        seq_nr_value);
     } else if (strcmp(action, "ALERT") == 0) {
         len = snprintf(buf_ptr, remaining,
                        "{"
                        "\"EventType\":\"%s\","
                        "\"ClientId\":\"%s\","
-                       "\"Seq\":%d,", event_type, client_id,
+                       "\"Seq\":%d", event_type, client_id,
                        seq_nr_value);
     }
     if (len < 0 || len >= remaining) {
@@ -185,18 +184,18 @@ static void mqtt_callback(void *ptr);
 
 //Clear MQTT buffer by assigning each action to NULL and freeing messages
 static void clear_mqtt_buffer() {
-    while (true) {
-        if (mutex_try_lock(&mqtt_mutex)) {
+    //while (true) {
+        //if (mutex_try_lock(&mqtt_mutex)) {
             for (int i = 0; i < messages_length; ++i) {
                 free(message_to_publish[i][0]);
                 //message_to_publish[i][0] = NULL;
                 message_to_publish[i][1] = NULL;
             }
             messages_length = 0;
-            mutex_unlock(&mqtt_mutex);
-            break;
-        }
-    }
+            //mutex_unlock(&mqtt_mutex);
+           // break;
+      //  }
+    //}
 }
 
 
@@ -212,6 +211,9 @@ static void publish(char *topic) {
         return;
     }
     send_to_mqtt_broker(message_to_publish[buffer_index][0], "CONNECTION");
+    mqtt_action_ptr = CONTINUE_PUBLISH;
+    buffer_index++;
+    ctimer_set(&mqtt_callback_timer, 3 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
 }
 
 static void mqtt_callback(void *ptr) {
@@ -238,13 +240,15 @@ static void mqtt_callback(void *ptr) {
                 break;
             }
             send_to_mqtt_broker(message_to_publish[buffer_index][0], "CONNECTION");
+            buffer_index++;
+            ctimer_set(&mqtt_callback_timer, 3 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
             break;
         case END_PUBLISH:
-            mutex_unlock(&mqtt_mutex);
             clear_mqtt_buffer();
             mqtt_action_ptr = FIRE_PUBLISH;
             buffer_index = 0;
             ctimer_set(&mqtt_callback_timer, PERIODIC_PUBLISH_INTERVAL, mqtt_callback, &mqtt_action_ptr);
+            mutex_unlock(&mqtt_mutex);
             break;
 
         default:
@@ -291,9 +295,6 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
             break;
         }
         case MQTT_EVENT_PUBACK: {
-            mqtt_action_ptr = CONTINUE_PUBLISH;
-            buffer_index++;
-            ctimer_set(&mqtt_callback_timer, 1 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
             LOG_DBG("Publishing complete.\n");
             break;
         }
@@ -316,7 +317,7 @@ static void update_config(void) {
 
 //Insert into queue
 static void insert_mqtt_buffer(char *message, char *action) {
-    while (true) {
+    //while (true) {
         if (mutex_try_lock(&mqtt_mutex)) {
             for (int i = 0; i < messages_length; ++i) {
                 if (message_to_publish[i][0] != NULL && strcmp(message, message_to_publish[i][0]) == 0) {
@@ -328,9 +329,14 @@ static void insert_mqtt_buffer(char *message, char *action) {
             message_to_publish[messages_length][1] = action;
             messages_length++;
             mutex_unlock(&mqtt_mutex);
-            break;
+            //break;
+	    return;
         }
-    }
+	else {
+		LOG_DBG("SKIPPO NON HO IL MUTEX\n");
+		return;
+}
+    //}
 }
 
 

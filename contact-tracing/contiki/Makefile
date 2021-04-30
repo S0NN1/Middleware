@@ -8,7 +8,4 @@ CONTIKI = /home/sonny/contiki-ng
 -include $(CONTIKI)/Makefile.identify-target
 
 MODULES_REL += arch/platform/$(TARGET)
-
-PLATFORMS_ONLY = native cooja
-
 include $(CONTIKI)/Makefile.include
