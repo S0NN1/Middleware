@@ -93,7 +93,6 @@ int messages_length = 0;
 
 //Other stuff
 static char *buf_ptr;
-static uint16_t seq_nr_value = 0;
 static int def_rt_rssi = 0;
 static mutex_t mqtt_mutex;
 static int buffer_index = 0;
@@ -144,7 +143,6 @@ void send_to_mqtt_broker(char *message, char *action) {
     int len;
     int remaining = APP_BUFFER_SIZE;
     char *event_type;
-    seq_nr_value++;
     buf_ptr = app_buffer;
     event_type = action;
     if (strcmp(action, "CONNECTION") == 0) {
@@ -152,16 +150,13 @@ void send_to_mqtt_broker(char *message, char *action) {
                        "{"
                        "\"EventType\":\"%s\","
                        "\"ClientId\":\"%s\","
-                       "\"SenderClientId\":\"%s\","
-                       "\"Seq\":%d", event_type, client_id, message,
-                       seq_nr_value);
+                       "\"SenderClientId\":\"%s\"", event_type, client_id, message);
     } else if (strcmp(action, "ALERT") == 0) {
         len = snprintf(buf_ptr, remaining,
                        "{"
                        "\"EventType\":\"%s\","
-                       "\"ClientId\":\"%s\","
-                       "\"Seq\":%d", event_type, client_id,
-                       seq_nr_value);
+                       "\"ClientId\":\"%s\"",
+                       event_type, client_id);
     }
     if (len < 0 || len >= remaining) {
         LOG_WARN("Buffer too short. Have %d, need %d + \\0\n", remaining, len);
@@ -304,7 +299,6 @@ static void update_config(void) {
              linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1], linkaddr_node_addr.u8[2], linkaddr_node_addr.u8[5],
              linkaddr_node_addr.u8[6], linkaddr_node_addr.u8[7]);
     snprintf(sub_topic, BUFFER_SIZE, "%s", "#");
-    seq_nr_value = 0;
 }
 
 
