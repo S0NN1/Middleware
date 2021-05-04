@@ -37,8 +37,9 @@
 #define MQTT_BROKER_PORT 1883
 
 //MQTT topics
-#define MQTT_INFECTION_TOPIC "kafka-to-mqtt-alert"
+#define MQTT_INFECTION_TOPIC "kafka-to-mqtt-alerts"
 #define MQTT_CONNECTION_TOPIC "motes-connections"
+#define MQTT_ALERT_TOPIC "motes-alerts"
 
 //Buffer sizes
 #define MAX_TCP_SEGMENT_SIZE    32
@@ -69,7 +70,7 @@ static struct simple_udp_connection broadcast_connection, broadcast_receiver_con
 static struct mqtt_connection conn;
 
 //Setting strings
-static char client_id[BUFFER_SIZE];
+static char client_id[34];
 static char pub_topic[BUFFER_SIZE];
 static char sub_topic[BUFFER_SIZE];
 static char app_buffer[APP_BUFFER_SIZE];
@@ -108,7 +109,25 @@ AUTOSTART_PROCESSES(&mqtt_client_process, &broadcast, &broadcast_receiver);
 
 //LOG for incoming publishes
 static void pub_handler(const char *topic, uint16_t topic_len, const uint8_t *chunk, uint16_t chunk_len) {
-    LOG_DBG("Pub Handler: topic='%s' (len=%u), chunk_len=%u\n", topic, topic_len, chunk_len);
+    char *message = "ALERT RECEIVED FROM";
+    char current_client_id_temp[34];
+    char sender_client_id[34];
+    int k =0;
+    for(int i=14; i<14+strlen(client_id); i++) {
+        current_client_id_temp[k] = (char)chunk[i];
+        k++;
+    }
+    current_client_id_temp[k]='\0';
+    if(strcmp(client_id, current_client_id_temp)==0) {
+        k=0;
+        for (int i = 65; i < strlen((char*)chunk)-2; ++i) {
+            sender_client_id[k] = (char) chunk[i];
+            k++;
+        }
+        current_client_id_temp[k]='\0';
+        LOG_DBG("%s %s\n", message, sender_client_id);
+        LOG_DBG("Payload=%s\n", chunk);
+    }
 }
 
 //Callback function for echo reply
@@ -295,7 +314,7 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
 
 //Update config
 static void update_config(void) {
-    snprintf(client_id, BUFFER_SIZE, "d:%s:%s:%02x%02x%02x%02x%02x%02x", MQTT_CLIENT_ORG_ID, MQTT_CLIENT_TYPE_ID,
+    snprintf(client_id, 34, "d:%s:%s:%02x%02x%02x%02x%02x%02x", MQTT_CLIENT_ORG_ID, MQTT_CLIENT_TYPE_ID,
              linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1], linkaddr_node_addr.u8[2], linkaddr_node_addr.u8[5],
              linkaddr_node_addr.u8[6], linkaddr_node_addr.u8[7]);
     snprintf(sub_topic, BUFFER_SIZE, "%s", "#");
