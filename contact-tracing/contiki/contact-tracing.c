@@ -24,7 +24,7 @@
 
 //LOG_LEVEL prints LOG messages, currently on DEBUG mode
 #define LOG_MODULE "mqtt-client"
-#define LOG_LEVEL LOG_LEVEL_DBG
+#define LOG_LEVEL LOG_LEVEL_INFO
 
 //MQTT client configs
 #define MQTT_CLIENT_ORG_ID "polimi"
@@ -42,27 +42,28 @@
 #define MQTT_ALERT_TOPIC "motes-alerts"
 
 //Buffer sizes
-#define MAX_TCP_SEGMENT_SIZE    32
+#define MAX_TCP_SEGMENT_SIZE 32
 #define BUFFER_SIZE 64
 #define APP_BUFFER_SIZE 512
 #define ECHO_REQ_PAYLOAD_LEN 20
 #define MAX_QUEUE_SIZE 100
+#define CLIENT_ID_SIZE 34
+#define FIRST_JSON_INDEX 14
+#define SECOND_JSON_INDEX 65
+
 
 //Intervals
 #define  PERIODIC_PUBLISH_INTERVAL 60*CLOCK_SECOND
 #define BROADCAST_INTERVAL 35*CLOCK_SECOND
 #define MQTT_KEEP_ALIVE_INTERVAL 30
+#define CLOCK_MINUTE 60*CLOCK_SECOND
 
 //UDP Ports
 #define SENDER_UDP_PORT 8765
 #define RECEIVER_UDP_PORT 5678
 
-enum action {
-    CONNECTION, ALERT
-};
-
 enum mqtt_action {
-    SUBSCRIBE, FIRE_PUBLISH, CONTINUE_PUBLISH, END_PUBLISH, NA
+    SUBSCRIBE, FIRE_PUBLISH, CONTINUE_PUBLISH, END_PUBLISH, NA, FIRE_ALERT
 };
 
 //Connections
@@ -70,7 +71,7 @@ static struct simple_udp_connection broadcast_connection, broadcast_receiver_con
 static struct mqtt_connection conn;
 
 //Setting strings
-static char client_id[34];
+static char client_id[CLIENT_ID_SIZE];
 static char pub_topic[BUFFER_SIZE];
 static char sub_topic[BUFFER_SIZE];
 static char app_buffer[APP_BUFFER_SIZE];
@@ -80,6 +81,7 @@ static struct mqtt_message *msg_ptr = 0;
 static struct uip_icmp6_echo_reply_notification echo_reply_notification;
 
 static struct ctimer mqtt_callback_timer;
+static struct ctimer mqtt_alert_timer;
 //MQTT timers
 static struct etimer mqtt_connect_timer;
 static struct etimer ping_parent_timer;
@@ -98,8 +100,11 @@ static int def_rt_rssi = 0;
 static mutex_t mqtt_mutex;
 static int buffer_index = 0;
 static enum mqtt_action mqtt_action_ptr = NA;
+static enum mqtt_action alert = FIRE_ALERT;
+
 
 //PROCESSES
+
 PROCESS(mqtt_client_process, "MQTT Client Main Process");
 
 PROCESS(broadcast, "Broadcast Process");
@@ -109,23 +114,22 @@ AUTOSTART_PROCESSES(&mqtt_client_process, &broadcast, &broadcast_receiver);
 
 //LOG for incoming publishes
 static void pub_handler(const char *topic, uint16_t topic_len, const uint8_t *chunk, uint16_t chunk_len) {
-    char *message = "ALERT RECEIVED FROM";
-    char current_client_id_temp[34];
-    char sender_client_id[34];
+    char current_client_id_temp[CLIENT_ID_SIZE];
+    char sender_client_id[CLIENT_ID_SIZE];
     int k =0;
-    for(int i=14; i<14+strlen(client_id); i++) {
+    for(int i=FIRST_JSON_INDEX; i<FIRST_JSON_INDEX+strlen(client_id); i++) {
         current_client_id_temp[k] = (char)chunk[i];
         k++;
     }
     current_client_id_temp[k]='\0';
     if(strcmp(client_id, current_client_id_temp)==0) {
         k=0;
-        for (int i = 65; i < strlen((char*)chunk)-2; ++i) {
+        for (int i = SECOND_JSON_INDEX; i < SECOND_JSON_INDEX + strlen(client_id); ++i) {
             sender_client_id[k] = (char) chunk[i];
             k++;
         }
         current_client_id_temp[k]='\0';
-        LOG_DBG("%s %s\n", message, sender_client_id);
+        LOG_INFO("Alert Received From: %s\n", sender_client_id);
         LOG_DBG("Payload=%s\n", chunk);
     }
 }
@@ -151,7 +155,7 @@ static void subscribe(char *topic) {
 static int construct_pub_topic(char *topic) {
     int len = snprintf(pub_topic, BUFFER_SIZE, "%s", topic);
     if (len < 0 || len >= BUFFER_SIZE) {
-        LOG_INFO("Pub Topic: %d, Buffer %d\n", len, BUFFER_SIZE);
+        LOG_DBG("Pub Topic: %d, Buffer %d\n", len, BUFFER_SIZE);
         return 0;
     }
     return 1;
@@ -190,7 +194,7 @@ void send_to_mqtt_broker(char *message, char *action) {
     }
     LOG_DBG("App Buffer: %s\n", app_buffer);
     mqtt_publish(&conn, NULL, pub_topic, (uint8_t *) app_buffer, strlen(app_buffer), MQTT_QOS_LEVEL_1, MQTT_RETAIN_OFF);
-    LOG_DBG("Publish!\n");
+    LOG_INFO("Published!\n");
 }
 
 static void mqtt_callback(void *ptr);
@@ -207,9 +211,7 @@ static void clear_mqtt_buffer() {
 
 
 static void publish(char *topic) {
-    if (construct_pub_topic(topic) == 0) {
-        LOG_ERR("State Config Error");
-    }
+    construct_pub_topic(topic);
     LOG_DBG("First Publish\n");
     if (message_to_publish[buffer_index][0] == NULL || buffer_index >= messages_length) {
         LOG_DBG("Empty buffer, skipping publish\n");
@@ -257,25 +259,29 @@ static void mqtt_callback(void *ptr) {
             ctimer_set(&mqtt_callback_timer, PERIODIC_PUBLISH_INTERVAL, mqtt_callback, &mqtt_action_ptr);
             mutex_unlock(&mqtt_mutex);
             break;
-
+        case FIRE_ALERT:
+            construct_pub_topic(MQTT_ALERT_TOPIC);
+            send_to_mqtt_broker(client_id, "ALERT");
+            break;
         default:
             break;
     }
 }
-
-//MQTT event
+/********************************************//**
+ * \brief kek.
+ ***********************************************/
 static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data) {
 
     switch (event) {
         case MQTT_EVENT_CONNECTED: {
             mqtt_action_ptr = SUBSCRIBE;
             ctimer_set(&mqtt_callback_timer, 1 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
-            LOG_DBG("Application has a MQTT connection\n");
+            LOG_INFO("Application has a MQTT connection\n");
             break;
         }
         case MQTT_EVENT_DISCONNECTED: {
             process_poll(&mqtt_client_process);
-            LOG_DBG("MQTT Disconnect. Reason %u\n", *((mqtt_event_t *) data));
+            LOG_INFO("MQTT Disconnect. Reason %u\n", *((mqtt_event_t *) data));
             break;
         }
         case MQTT_EVENT_PUBLISH: {
@@ -294,7 +300,10 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
             mqtt_action_ptr = FIRE_PUBLISH;
             buffer_index = 0;
             ctimer_set(&mqtt_callback_timer, 1 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
-            LOG_DBG("Application is subscribed to topic successfully\n");
+            int random = random_rand() % 5 + 1;
+            LOG_INFO("Random interval for alert set: %d\n", random);
+            ctimer_set(&mqtt_alert_timer, random*CLOCK_MINUTE, mqtt_callback, &alert);
+            LOG_INFO("Application is subscribed to topic successfully\n");
             break;
         }
         case MQTT_EVENT_UNSUBACK: {
@@ -314,7 +323,7 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
 
 //Update config
 static void update_config(void) {
-    snprintf(client_id, 34, "d:%s:%s:%02x%02x%02x%02x%02x%02x", MQTT_CLIENT_ORG_ID, MQTT_CLIENT_TYPE_ID,
+    snprintf(client_id, CLIENT_ID_SIZE, "d:%s:%s:%02x%02x%02x%02x%02x%02x", MQTT_CLIENT_ORG_ID, MQTT_CLIENT_TYPE_ID,
              linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1], linkaddr_node_addr.u8[2], linkaddr_node_addr.u8[5],
              linkaddr_node_addr.u8[6], linkaddr_node_addr.u8[7]);
     snprintf(sub_topic, BUFFER_SIZE, "%s", "#");
@@ -336,7 +345,6 @@ static void insert_mqtt_buffer(char *message, char *action) {
         mutex_unlock(&mqtt_mutex);
         return;
     } else {
-        LOG_DBG("SKIPPO NON HO IL MUTEX\n");
         return;
     }
 }
@@ -363,7 +371,7 @@ static void broadcast_receiver_callback(struct simple_udp_connection *c, const u
                                         const uint8_t *data,
                                         uint16_t datalen) {
     insert_mqtt_buffer((char *) data, "CONNECTION");
-    LOG_DBG("Received %s\n", data);
+    LOG_INFO("Received %s\n", data);
 }
 
 
@@ -381,7 +389,7 @@ PROCESS_THREAD(broadcast, ev, data) {
                     uip_create_linklocal_allnodes_mcast(&addr);
                     simple_udp_sendto(&broadcast_connection, client_id, strlen(client_id), &addr);
                     etimer_reset(&broadcast_timer);
-                    LOG_DBG("Broadcast sent\n");
+                    LOG_INFO("Broadcast sent\n");
                 }
     PROCESS_END();
 }
@@ -397,7 +405,7 @@ PROCESS_THREAD(broadcast_receiver, ev, data) {
 
 PROCESS_THREAD(mqtt_client_process, ev, data) {
     PROCESS_BEGIN();
-                LOG_DBG("MQTT Client Main Process\n");
+                LOG_INFO("MQTT Client Main Process\n");
                 update_config();
                 def_rt_rssi = 0x8000000;
                 uip_icmp6_echo_reply_callback_add(&echo_reply_notification, echo_reply_handler);
