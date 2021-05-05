@@ -89,6 +89,7 @@ public class MainProducer {
                        "\"AlertDest\":\""+ result.getValue(3) + "\", " +
                        "\"AlertSource\":\"" + clientId + "\"" +
                        "}";
+               logger.debug(value);
                producer.send(new ProducerRecord<String, String>("kafka-to-mqtt-alerts", key, value));
             }
             logger.info("Alerts sent to clients who has been in contact with " + clientId);
