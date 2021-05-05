@@ -1,4 +1,27 @@
-#include "contiki.h"
+/********************************************//**
+ *  \file contact-tracing.c
+ *  \brief This file is composed by 3 processes:
+ *
+ *  Broadcast sender process;
+ *
+ *  Broadcast Receiver process;
+ *
+ *  MQTT Client process.
+ *
+ *  The first one sends its client id (generated in the MQTT Client process) at regular intervals via SIMPLE UDP
+ *  library to the other motes of the same network.
+ *
+ *  The receiver listens to incoming broadcast messages and, upon receiving, it inserts the data into a queue buffer
+ *  which it is later published on the MQTT connection topic (the whole operation uses mutexes for concurrency
+ *  purposes).
+ *
+ *  The last process is the first one to be fired and calls the other ones.
+ *  First it establishes the connection with the broker, then it waits for a PROCESS_EVENT_TIMER (etimer o ctimer).
+ *  When registering the MQTT connection, it enables a mqtt_event callback function that handles most of the MQTT events.
+ *  \author Sonny
+ *  \version 1.0
+ ***********************************************/
+ #include "contiki.h"
 #include "dev/button-hal.h"
 #include "lib/random.h"
 #include "lib/sensors.h"
@@ -22,7 +45,7 @@
 #include <string.h>
 #include <stdio.h>
 
-//LOG_LEVEL prints LOG messages, currently on DEBUG mode
+//LOG_LEVEL prints LOG messages, currently on INFO mode
 #define LOG_MODULE "mqtt-client"
 #define LOG_LEVEL LOG_LEVEL_INFO
 
@@ -51,7 +74,6 @@
 #define FIRST_JSON_INDEX 14
 #define SECOND_JSON_INDEX 65
 
-
 //Intervals
 #define  PERIODIC_PUBLISH_INTERVAL 60*CLOCK_SECOND
 #define BROADCAST_INTERVAL 35*CLOCK_SECOND
@@ -62,15 +84,28 @@
 #define SENDER_UDP_PORT 8765
 #define RECEIVER_UDP_PORT 5678
 
+/********************************************//**
+ * \brief MQTT enums based on MQTT_EVENTS.
+ *
+ * SUBSCRIBE -> MQTT_EVENT_SUBSCRIBE;
+ *
+ * FIRE_PUBLISH, CONTINUE_PUBLISH -> MQTT_EVENT_PUBLISH (connection);
+ *
+ * END_PUBLISH -> MQTT_EVENT_PUBLISH ended;
+ *
+ * FIRE_ALERT -> MQTT_EVENT_PUBLISH (alert)
+ *
+ * NA -> NOT ASSIGNED
+ ***********************************************/
 enum mqtt_action {
-    SUBSCRIBE, FIRE_PUBLISH, CONTINUE_PUBLISH, END_PUBLISH, NA, FIRE_ALERT
+    SUBSCRIBE, FIRE_PUBLISH, CONTINUE_PUBLISH, END_PUBLISH, FIRE_ALERT, NA
 };
 
 //Connections
 static struct simple_udp_connection broadcast_connection, broadcast_receiver_connection;
 static struct mqtt_connection conn;
 
-//Setting strings
+//MQTT settings
 static char client_id[CLIENT_ID_SIZE];
 static char pub_topic[BUFFER_SIZE];
 static char sub_topic[BUFFER_SIZE];
@@ -80,9 +115,11 @@ static char app_buffer[APP_BUFFER_SIZE];
 static struct mqtt_message *msg_ptr = 0;
 static struct uip_icmp6_echo_reply_notification echo_reply_notification;
 
+//MQTT ctimers used for publishing connections and alerts.
 static struct ctimer mqtt_callback_timer;
 static struct ctimer mqtt_alert_timer;
-//MQTT timers
+
+//MQTT etimers
 static struct etimer mqtt_connect_timer;
 static struct etimer ping_parent_timer;
 static struct etimer mqtt_register_timer;
@@ -103,16 +140,20 @@ static enum mqtt_action mqtt_action_ptr = NA;
 static enum mqtt_action alert = FIRE_ALERT;
 
 
-//PROCESSES
-
+//CONTIKI-NG PROCESSES
 PROCESS(mqtt_client_process, "MQTT Client Main Process");
-
 PROCESS(broadcast, "Broadcast Process");
-
 PROCESS(broadcast_receiver, "Broadcast Receiver Process");
 AUTOSTART_PROCESSES(&mqtt_client_process, &broadcast, &broadcast_receiver);
 
-//LOG for incoming publishes
+/*******************************************************************************************************************//**
+ * \brief Function used for displaying incoming messages from subscribed topic.
+ *
+ * @param topic MQTT subscribed topic.
+ * @param topic_len MQTT subscribed topic length.
+ * @param chunk Content of the received message.
+ * @param chunk_len Content length.
+ **********************************************************************************************************************/
 static void pub_handler(const char *topic, uint16_t topic_len, const uint8_t *chunk, uint16_t chunk_len) {
     char current_client_id_temp[CLIENT_ID_SIZE];
     char sender_client_id[CLIENT_ID_SIZE];
@@ -133,15 +174,25 @@ static void pub_handler(const char *topic, uint16_t topic_len, const uint8_t *ch
         LOG_DBG("Payload=%s\n", chunk);
     }
 }
-
-//Callback function for echo reply
+/*******************************************************************************************************************//**
+ * \brief Callback function for echo reply.
+ *
+ * @param source Source IP address.
+ * @param ttl Time To Live.
+ * @param data Payload data.
+ * @param datalen Data length.
+ **********************************************************************************************************************/
 static void echo_reply_handler(uip_ipaddr_t *source, uint8_t ttl, uint8_t *data, uint16_t datalen) {
     if (uip_ip6addr_cmp(source, uip_ds6_defrt_choose())) {
         def_rt_rssi = sicslowpan_get_last_rssi();
     }
 }
 
-//Subscribe to MQTT topic
+/*******************************************************************************************************************//**
+ * \brief Function used for MQTT subscribing. Currently using MQTT_QOS_LEVEL_0 (No PUBACK).
+ *
+ * @param topic MQTT subscribe topic.
+ **********************************************************************************************************************/
 static void subscribe(char *topic) {
     mqtt_status_t status;
     LOG_DBG("Subscribing!\n");
@@ -151,6 +202,11 @@ static void subscribe(char *topic) {
     }
 }
 
+/*******************************************************************************************************************//**
+ * \brief Function for building the publish topic, it checks if the topic exceeds the BUFFER_SIZE.
+ *
+ *  * @param topic MQTT topic.
+ **********************************************************************************************************************/
 //Build  publish topic
 static int construct_pub_topic(char *topic) {
     int len = snprintf(pub_topic, BUFFER_SIZE, "%s", topic);
@@ -161,7 +217,19 @@ static int construct_pub_topic(char *topic) {
     return 1;
 }
 
-//MQTT publish
+/*******************************************************************************************************************//**
+ * \brief Function used to build json format messages for the mqtt_publish and fires it.
+ *
+ * It distinguishes between a CONNECTION or ALERT type and it creates different json strings.
+ *
+ * The publish function uses MQTT_QOS_LEVEL_1 because the PUBACK identifies the first publish of the queue buffer.
+ *
+ * After the first publish, all the following ones follow the case FIRE_PUBLISH covered by the mqtt_callback() function,
+ * in order to reset the ctimer responsible for multiple publishes.
+ *
+ * @param message
+ * @param action
+ **********************************************************************************************************************/
 void send_to_mqtt_broker(char *message, char *action) {
     int len;
     int remaining = APP_BUFFER_SIZE;
@@ -199,17 +267,20 @@ void send_to_mqtt_broker(char *message, char *action) {
 
 static void mqtt_callback(void *ptr);
 
-//Clear MQTT buffer by assigning each action to NULL and freeing messages
+/*******************************************************************************************************************//**
+ * \brief Function for emptying the queue buffer, effectively assigning all action strings to NULL and freeing all
+ * dynamic message strings.
+ **********************************************************************************************************************/
 static void clear_mqtt_buffer() {
     for (int i = 0; i < messages_length; ++i) {
         free(message_to_publish[i][0]);
-        //message_to_publish[i][0] = NULL;
         message_to_publish[i][1] = NULL;
     }
     messages_length = 0;
 }
 
-
+/********************************************//**
+ ***********************************************/
 static void publish(char *topic) {
     construct_pub_topic(topic);
     LOG_DBG("First Publish\n");
@@ -225,6 +296,8 @@ static void publish(char *topic) {
     ctimer_set(&mqtt_callback_timer, 3 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
 }
 
+/********************************************//**
+ ***********************************************/
 static void mqtt_callback(void *ptr) {
     switch ((*(enum mqtt_action *) ptr)) {
         case SUBSCRIBE:
@@ -262,13 +335,16 @@ static void mqtt_callback(void *ptr) {
         case FIRE_ALERT:
             construct_pub_topic(MQTT_ALERT_TOPIC);
             send_to_mqtt_broker(client_id, "ALERT");
+            int random = random_rand() % 5 + 1;
+            LOG_INFO("Random interval for alert set: %d\n", random);
+            ctimer_set(&mqtt_alert_timer, random*CLOCK_MINUTE, mqtt_callback, &alert);
             break;
         default:
             break;
     }
 }
+
 /********************************************//**
- * \brief kek.
  ***********************************************/
 static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data) {
 
@@ -320,7 +396,8 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
     }
 }
 
-
+/********************************************//**
+ ***********************************************/
 //Update config
 static void update_config(void) {
     snprintf(client_id, CLIENT_ID_SIZE, "d:%s:%s:%02x%02x%02x%02x%02x%02x", MQTT_CLIENT_ORG_ID, MQTT_CLIENT_TYPE_ID,
@@ -329,7 +406,8 @@ static void update_config(void) {
     snprintf(sub_topic, BUFFER_SIZE, "%s", "#");
 }
 
-
+/********************************************//**
+ ***********************************************/
 //Insert into queue
 static void insert_mqtt_buffer(char *message, char *action) {
     if (mutex_try_lock(&mqtt_mutex)) {
@@ -349,7 +427,8 @@ static void insert_mqtt_buffer(char *message, char *action) {
     }
 }
 
-
+/********************************************//**
+ ***********************************************/
 //Check net connectivity
 static bool have_connectivity(void) {
     if (uip_ds6_get_global(ADDR_PREFERRED) == NULL ||
@@ -359,12 +438,16 @@ static bool have_connectivity(void) {
     return true;
 }
 
+/********************************************//**
+ ***********************************************/
 //Simple UDP broadcast sender callback functions
 static void broadcast_callback(struct simple_udp_connection *c, const uip_ipaddr_t *sender_addr, uint16_t sender_port,
                                const uip_ipaddr_t *receiver_addr, uint16_t receiver_port, const uint8_t *data,
                                uint16_t datalen) {
 }
 
+/********************************************//**
+ ***********************************************/
 //Simple UDP broadcast
 static void broadcast_receiver_callback(struct simple_udp_connection *c, const uip_ipaddr_t *sender_addr,
                                         uint16_t sender_port, const uip_ipaddr_t *receiver_addr, uint16_t receiver_port,
@@ -374,7 +457,8 @@ static void broadcast_receiver_callback(struct simple_udp_connection *c, const u
     LOG_INFO("Received %s\n", data);
 }
 
-
+/********************************************//**
+ ***********************************************/
 //Broadcast PROCESS
 PROCESS_THREAD(broadcast, ev, data) {
     uip_ipaddr_t addr;
@@ -394,6 +478,8 @@ PROCESS_THREAD(broadcast, ev, data) {
     PROCESS_END();
 }
 
+/********************************************//**
+ ***********************************************/
 //Broadcast receiver PROCESS
 PROCESS_THREAD(broadcast_receiver, ev, data) {
     PROCESS_BEGIN();
