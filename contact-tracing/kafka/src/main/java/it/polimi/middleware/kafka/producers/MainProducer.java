@@ -1,7 +1,6 @@
 package it.polimi.middleware.kafka.producers;
 
 import io.confluent.ksql.api.client.*;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import it.polimi.middleware.kafka.utils.Utils;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -14,7 +13,6 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 public class MainProducer {
     private static final Logger logger = LoggerFactory.getLogger("Logger");
@@ -31,17 +29,18 @@ public class MainProducer {
             "WITH (" +
             "KAFKA_TOPIC='mqtt-to-kafka-alerts', " +
             "VALUE_FORMAT='json');";
-    private static final String connectionTableQuery = "CREATE TABLE CONNECTION_TABLE AS\n" +
-            "    SELECT CLIENTID,\n" +
-            "    COLLECT_SET(SENDERCLIENTID) AS SENDERCLIENTID\n" +
-            "    FROM  CONNECTIONS \n" +
-            "    GROUP BY CLIENTID\n" +
-            "    EMIT CHANGES;";
+    private static final String connectionTableQuery = """
+            CREATE TABLE CONNECTION_TABLE AS
+                SELECT CLIENTID,
+                COLLECT_SET(SENDERCLIENTID) AS SENDERCLIENTID
+                FROM  CONNECTIONS\s
+                GROUP BY CLIENTID
+                EMIT CHANGES;""";
     private static final String ksqlQuery = "SELECT * FROM ALERTS EMIT CHANGES;";
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         Properties props = Utils.setupProducerProps();
-        Producer<String, String> producer = new KafkaProducer<String, String>(props);
+        Producer<String, String> producer = new KafkaProducer<>(props);
         Client ksqlClient = Utils.createKSQLClient();
         List<StreamInfo> streams = ksqlClient.listStreams().get();
         boolean alertStreamFound = false;
@@ -91,7 +90,7 @@ public class MainProducer {
                                 "\"AlertDest\":\"" + json +"\", " +
                                 "\"AlertSource\":\"" + clientId + "\"" +
                                 "}";
-                        producer.send(new ProducerRecord<String, String>("kafka-to-mqtt-alerts", timestamp.toString(), value));
+                        producer.send(new ProducerRecord<>("kafka-to-mqtt-alerts", timestamp.toString(), value));
                     }
                 }
                 logger.info("Alerts sent to clients who has been in contact with " + clientId);
