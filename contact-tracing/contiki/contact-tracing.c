@@ -1,4 +1,4 @@
-/********************************************//**
+/*******************************************************************************************************************//**
  *  \file contact-tracing.c
  *  \brief This file is composed by 3 processes:
  *
@@ -20,7 +20,7 @@
  *  When registering the MQTT connection, it enables a mqtt_event callback function that handles most of the MQTT events.
  *  \author Sonny
  *  \version 1.0
- ***********************************************/
+ **********************************************************************************************************************/
  #include "contiki.h"
 #include "dev/button-hal.h"
 #include "lib/random.h"
@@ -84,19 +84,19 @@
 #define SENDER_UDP_PORT 8765
 #define RECEIVER_UDP_PORT 5678
 
-/********************************************//**
+/*******************************************************************************************************************//**
  * \brief MQTT enums based on MQTT_EVENTS.
  *
- * SUBSCRIBE -> MQTT_EVENT_SUBSCRIBE;
+ * - SUBSCRIBE -> MQTT_EVENT_SUBSCRIBE;
  *
- * FIRE_PUBLISH, CONTINUE_PUBLISH -> MQTT_EVENT_PUBLISH (connection);
+ * - FIRE_PUBLISH, CONTINUE_PUBLISH -> MQTT_EVENT_PUBLISH (connection);
  *
- * END_PUBLISH -> MQTT_EVENT_PUBLISH ended;
+ * - END_PUBLISH -> MQTT_EVENT_PUBLISH ended;
  *
- * FIRE_ALERT -> MQTT_EVENT_PUBLISH (alert)
+ * - FIRE_ALERT -> MQTT_EVENT_PUBLISH (alert)
  *
- * NA -> NOT ASSIGNED
- ***********************************************/
+ * - NA -> NOT ASSIGNED
+ **********************************************************************************************************************/
 enum mqtt_action {
     SUBSCRIBE, FIRE_PUBLISH, CONTINUE_PUBLISH, END_PUBLISH, FIRE_ALERT, NA
 };
@@ -227,8 +227,8 @@ static int construct_pub_topic(char *topic) {
  * After the first publish, all the following ones follow the case FIRE_PUBLISH covered by the mqtt_callback() function,
  * in order to reset the ctimer responsible for multiple publishes.
  *
- * @param message
- * @param action
+ * @param message Client ID received by the broadcast_receiver process or the alert fired by the mqtt_alert_timer.
+ * @param action Type of action: CONNECTION or ALERT.
  **********************************************************************************************************************/
 void send_to_mqtt_broker(char *message, char *action) {
     int len;
@@ -279,8 +279,16 @@ static void clear_mqtt_buffer() {
     messages_length = 0;
 }
 
-/********************************************//**
- ***********************************************/
+/*******************************************************************************************************************//**
+ * \brief Function used to fire publish action by calling send_to_mqtt_broker().
+ *
+ * It is used only for CONNECTIONS (ALERTS are fired directly from send_to_mqtt_broker()), with the first if clause it
+ * checks if the current publish queue is empty and if so it skips the action.
+ *
+ * After the send_to_mqtt_broker() it resets the publish c_timer for the mqtt_callback function.
+ *
+ * @param topic MQTT publish topic.
+ **********************************************************************************************************************/
 static void publish(char *topic) {
     construct_pub_topic(topic);
     LOG_DBG("First Publish\n");
@@ -296,8 +304,27 @@ static void publish(char *topic) {
     ctimer_set(&mqtt_callback_timer, 3 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
 }
 
-/********************************************//**
- ***********************************************/
+/*******************************************************************************************************************//**
+ * \brief Function used for main MQTT actions:
+ *
+ * - SUBSCRIBE: it checks if the client is connected to the RPL border router and subscribes to the
+ * MQTT_INFECTION_TOPIC; otherwise it resets the subscribe action ctimer.
+ *
+ * - FIRE_PUBLISH: it fires the first publish on the MQTT_CONNECTION_TOPIC if the mutex is free, otherwise it resets
+ * the publish action ctimer.
+ *
+ * - CONTINUE_PUBLISH: it fires each value in the queue buffer by calling itself, if the queue is empty it fires the
+ * END_PUBLISH timer.
+ *
+ * - END_PUBLISH: it resets the publish timer (mqtt_callback_timer) within a PERIODIC_PUBLISH_INTERVAL and resets the
+ * buffer_index (indicating the emptiness of the buffer).
+ *
+ * - FIRE_ALERT: it builds the alert publish topic and publish an alert on it, ultimately it resets the alert timer.
+ *
+ * @param ptr Address of enum mqtt_action (mqtt_action_ptr or alert) used for switch case in order to recognize the
+ * action.
+ **********************************************************************************************************************/
+
 static void mqtt_callback(void *ptr) {
     switch ((*(enum mqtt_action *) ptr)) {
         case SUBSCRIBE:
@@ -344,8 +371,29 @@ static void mqtt_callback(void *ptr) {
     }
 }
 
-/********************************************//**
- ***********************************************/
+/*******************************************************************************************************************//**
+  * \brief Function called by the mqtt_client_process when receiving packets from the broker, based on their type.
+  *
+  * - MQTT_EVENT_CONNECTED (MQTT client is connected to the broker): it fires the subscribe() function by setting the
+  * ctimer of the mqtt_callback() function.
+  *
+  * - MQTT_EVENT_DISCONNECTED (MQTT client is disconnected from the broker): it uses the process_poll() function in
+  * order to restart the MQTT connection.
+  *
+  * - MQTT_EVENT_PUBLISH (MQTT client received a publish on the subscribed topic): it prints alerts received from the
+  * related topic.
+  *
+  * - MQTT_EVENT_SUBACK (MQTT client is subscribed to a topic): it fires the first publish (followed by the remaining
+  * until the queue is fully processed) and it sets a random timer for the alert event.
+  *
+  * - MQTT_EVENT_UNSUBACK (MQTT client successfully unsubscribed from a topic).
+  *
+  * - MQTT_EVENT_PUBACK (MQTT client successfully published a message to a topic).
+  *
+  * @param m MQTT connection.
+  * @param event PROCESS_EVENT of type MQTT, it is received for every action between the client and the broker.
+  * @param data Content of the PROCESS_EVENT.
+**********************************************************************************************************************/
 static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data) {
 
     switch (event) {
@@ -362,7 +410,6 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
         }
         case MQTT_EVENT_PUBLISH: {
             msg_ptr = data;
-            /* Implement first_flag in publish message? */
             if (msg_ptr->first_chunk) {
                 msg_ptr->first_chunk = 0;
                 LOG_DBG("Application received publish for topic '%s'. Payload "
@@ -396,9 +443,9 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
     }
 }
 
-/********************************************//**
- ***********************************************/
-//Update config
+/*******************************************************************************************************************//**
+ * \brief Function for building client ID and subscribe topic.
+ **********************************************************************************************************************/
 static void update_config(void) {
     snprintf(client_id, CLIENT_ID_SIZE, "d:%s:%s:%02x%02x%02x%02x%02x%02x", MQTT_CLIENT_ORG_ID, MQTT_CLIENT_TYPE_ID,
              linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1], linkaddr_node_addr.u8[2], linkaddr_node_addr.u8[5],
@@ -406,9 +453,13 @@ static void update_config(void) {
     snprintf(sub_topic, BUFFER_SIZE, "%s", "#");
 }
 
-/********************************************//**
- ***********************************************/
-//Insert into queue
+/*******************************************************************************************************************//**
+ * \brief Function for inserting client IDs (ALERTS or CONNECTIONS) into the queue and then published to the MQTT
+ * broker.
+ *
+ * @param message Client ID received by the broadcast_receiver process or the alert fired by the mqtt_alert_timer.
+ * @param action Type of action: CONNECTION or ALERT.
+ **********************************************************************************************************************/
 static void insert_mqtt_buffer(char *message, char *action) {
     if (mutex_try_lock(&mqtt_mutex)) {
         for (int i = 0; i < messages_length; ++i) {
@@ -427,9 +478,9 @@ static void insert_mqtt_buffer(char *message, char *action) {
     }
 }
 
-/********************************************//**
- ***********************************************/
-//Check net connectivity
+/*******************************************************************************************************************//**
+ * \brief Function checking if RPL connection with the border router has been established.
+ **********************************************************************************************************************/
 static bool have_connectivity(void) {
     if (uip_ds6_get_global(ADDR_PREFERRED) == NULL ||
         uip_ds6_defrt_choose() == NULL) {
@@ -438,17 +489,38 @@ static bool have_connectivity(void) {
     return true;
 }
 
-/********************************************//**
- ***********************************************/
+/*******************************************************************************************************************//**
+ * \brief Callback function used when receiving an UDP packet on clients reached by the UDP packets sent by the
+ * broadcast process (Unused in this implementation).
+ *
+  * @param c Broadcast connection (simple-udp.c).
+  * @param sender_addr Sender IP address (IPv6).
+  * @param sender_port Sender UDP port.
+  * @param receiver_addr Receiver IP address (IPv6).
+  * @param receiver_port Receiver UDP port.
+  * @param data Data received in UDP payload.
+  * @param datalen Data length.
+ **********************************************************************************************************************/
+
 //Simple UDP broadcast sender callback functions
 static void broadcast_callback(struct simple_udp_connection *c, const uip_ipaddr_t *sender_addr, uint16_t sender_port,
                                const uip_ipaddr_t *receiver_addr, uint16_t receiver_port, const uint8_t *data,
                                uint16_t datalen) {
 }
 
-/********************************************//**
- ***********************************************/
-//Simple UDP broadcast
+/*******************************************************************************************************************//**
+ * \brief Callback function used when receiving an UDP packet on broadcast_receiver process.
+ *
+ * It inserts incoming client IDs into the queue buffer.
+ *
+  * @param c Broadcast connection (simple-udp.c).
+  * @param sender_addr Sender IP address (IPv6).
+  * @param sender_port Sender UDP port.
+  * @param receiver_addr Receiver IP address (IPv6).
+  * @param receiver_port Receiver UDP port.
+  * @param data Data received in UDP payload.
+  * @param datalen Data length.
+ **********************************************************************************************************************/
 static void broadcast_receiver_callback(struct simple_udp_connection *c, const uip_ipaddr_t *sender_addr,
                                         uint16_t sender_port, const uip_ipaddr_t *receiver_addr, uint16_t receiver_port,
                                         const uint8_t *data,
@@ -457,9 +529,13 @@ static void broadcast_receiver_callback(struct simple_udp_connection *c, const u
     LOG_INFO("Received %s\n", data);
 }
 
-/********************************************//**
- ***********************************************/
-//Broadcast PROCESS
+/*******************************************************************************************************************//**
+ * \brief Contiki process thread responsible for sending broadcast UDP packets.
+ *
+ * @param data Content of PROCESS_EVENT.
+ * @param ev PROCESS_EVENT passed to the PROCESS.
+ * @param broadcast Process name.
+ **********************************************************************************************************************/
 PROCESS_THREAD(broadcast, ev, data) {
     uip_ipaddr_t addr;
     PROCESS_BEGIN();
@@ -478,9 +554,13 @@ PROCESS_THREAD(broadcast, ev, data) {
     PROCESS_END();
 }
 
-/********************************************//**
- ***********************************************/
-//Broadcast receiver PROCESS
+/*******************************************************************************************************************//**
+ * \brief Contiki process thread responsible for receiving broadcast UDP packets.
+ *
+ * @param data Content of PROCESS_EVENT.
+ * @param ev PROCESS_EVENT passed to the PROCESS.
+ * @param broadcast_receiver Process name.
+ **********************************************************************************************************************/
 PROCESS_THREAD(broadcast_receiver, ev, data) {
     PROCESS_BEGIN();
                 simple_udp_register(&broadcast_receiver_connection, RECEIVER_UDP_PORT, NULL, SENDER_UDP_PORT,
@@ -489,6 +569,13 @@ PROCESS_THREAD(broadcast_receiver, ev, data) {
     PROCESS_END();
 }
 
+/*******************************************************************************************************************//**
+ * \brief Contiki process thread responsible for mqtt client's actions.
+ *
+ * @param data Content of PROCESS_EVENT.
+ * @param ev PROCESS_EVENT passed to the PROCESS when calling process_poll() or using etimer_set(&example_etimer).
+ * @param mqtt_client_process Process name.
+ **********************************************************************************************************************/
 PROCESS_THREAD(mqtt_client_process, ev, data) {
     PROCESS_BEGIN();
                 LOG_INFO("MQTT Client Main Process\n");
