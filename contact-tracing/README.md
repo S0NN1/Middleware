@@ -1,3 +1,3 @@
 # Middleware
 
-![lel][.github/images/middleware.svg]
+![lel](.github/images/middleware.png)
