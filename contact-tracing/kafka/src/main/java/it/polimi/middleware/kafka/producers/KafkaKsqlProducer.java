@@ -28,7 +28,7 @@ import java.util.concurrent.ExecutionException;
  * @author Sonny
  * @version 1.0
  */
-public class KafkaKSQLProducer {
+public class KafkaKsqlProducer {
     private static final Logger logger = LoggerFactory.getLogger("Logger");
     private static final String connectionStream = "CREATE STREAM CONNECTIONS (" +
             "EventType VARCHAR , " +

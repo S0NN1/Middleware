@@ -97,7 +97,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>it.polimi.middleware.kafka.producers.KafkaKSQLProducer</mainClass>
+                            <mainClass>it.polimi.middleware.kafka.producers.KafkaKsqlProducer</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
