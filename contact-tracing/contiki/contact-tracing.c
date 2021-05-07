@@ -205,9 +205,9 @@ static void subscribe(char *topic) {
 /*******************************************************************************************************************//**
  * \brief Function for building the publish topic, it checks if the topic exceeds the BUFFER_SIZE.
  *
- *  * @param topic MQTT topic.
+ *  @param topic MQTT topic.
+ *  @return 1 if successful, 0 otherwise.
  **********************************************************************************************************************/
-//Build  publish topic
 static int construct_pub_topic(char *topic) {
     int len = snprintf(pub_topic, BUFFER_SIZE, "%s", topic);
     if (len < 0 || len >= BUFFER_SIZE) {
@@ -480,6 +480,7 @@ static void insert_mqtt_buffer(char *message, char *action) {
 
 /*******************************************************************************************************************//**
  * \brief Function checking if RPL connection with the border router has been established.
+ * @return true is successful, false otherwise.
  **********************************************************************************************************************/
 static bool have_connectivity(void) {
     if (uip_ds6_get_global(ADDR_PREFERRED) == NULL ||
@@ -493,16 +494,14 @@ static bool have_connectivity(void) {
  * \brief Callback function used when receiving an UDP packet on clients reached by the UDP packets sent by the
  * broadcast process (Unused in this implementation).
  *
-  * @param c Broadcast connection (simple-udp.c).
-  * @param sender_addr Sender IP address (IPv6).
-  * @param sender_port Sender UDP port.
-  * @param receiver_addr Receiver IP address (IPv6).
-  * @param receiver_port Receiver UDP port.
-  * @param data Data received in UDP payload.
-  * @param datalen Data length.
+ * @param c Broadcast connection (simple-udp.c).
+ * @param sender_addr Sender IP address (IPv6).
+ * @param sender_port Sender UDP port.
+ * @param receiver_addr Receiver IP address (IPv6).
+ * @param receiver_port Receiver UDP port.
+ * @param data Data received in UDP payload.
+ * @param datalen Data length.
  **********************************************************************************************************************/
-
-//Simple UDP broadcast sender callback functions
 static void broadcast_callback(struct simple_udp_connection *c, const uip_ipaddr_t *sender_addr, uint16_t sender_port,
                                const uip_ipaddr_t *receiver_addr, uint16_t receiver_port, const uint8_t *data,
                                uint16_t datalen) {
@@ -513,13 +512,13 @@ static void broadcast_callback(struct simple_udp_connection *c, const uip_ipaddr
  *
  * It inserts incoming client IDs into the queue buffer.
  *
-  * @param c Broadcast connection (simple-udp.c).
-  * @param sender_addr Sender IP address (IPv6).
-  * @param sender_port Sender UDP port.
-  * @param receiver_addr Receiver IP address (IPv6).
-  * @param receiver_port Receiver UDP port.
-  * @param data Data received in UDP payload.
-  * @param datalen Data length.
+ * @param c Broadcast connection (simple-udp.c).
+ * @param sender_addr Sender IP address (IPv6).
+ * @param sender_port Sender UDP port.
+ * @param receiver_addr Receiver IP address (IPv6).
+ * @param receiver_port Receiver UDP port.
+ * @param data Data received in UDP payload.
+ * @param datalen Data length.
  **********************************************************************************************************************/
 static void broadcast_receiver_callback(struct simple_udp_connection *c, const uip_ipaddr_t *sender_addr,
                                         uint16_t sender_port, const uip_ipaddr_t *receiver_addr, uint16_t receiver_port,
