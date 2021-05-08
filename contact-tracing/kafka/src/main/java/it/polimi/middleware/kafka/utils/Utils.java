@@ -4,42 +4,56 @@ import io.confluent.ksql.api.client.Client;
 import io.confluent.ksql.api.client.ClientOptions;
 import org.apache.kafka.common.serialization.StringSerializer;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Properties;
 
 /**
  * Utils class used for setup function (initially thought to be used in multiple classes).
  */
 public class Utils {
-    private static final String KAFKA_BROKER_IP = "51.103.25.211";
-    private static final String KAFKA_BROKER_PORT = "9092";
-    private static final int KAFKA_KSQL_PORT = 8088;
-    private static final String MAX_IDLE_TIMEOUT = "86400000";
-
     /**
-     * Sets producer props.
-     *
+     * Sets producer props from kafka.properties.
      * @return the producer props.
      */
     public static Properties setupProducerProps() {
         Properties props = new Properties();
-        props.put("bootstrap.servers", KAFKA_BROKER_IP + ":" + KAFKA_BROKER_PORT);
-        props.put("acks", "all");
-        props.put("connections.max.idle.ms", MAX_IDLE_TIMEOUT);
-        props.put("key.serializer", StringSerializer.class.getName());
-        props.put("value.serializer", StringSerializer.class.getName());
+        try {
+            FileInputStream file = new FileInputStream("./kafka.properties");
+            props.load(file);
+        } catch (FileNotFoundException e) {
+            System.err.println("Config properties file not found, please be sure you have setup a kafka.properties " +
+                    "file on the same root folder of the jar");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return props;
     }
 
     /**
-     * Create ksql client client with host and port defined.
+     * Create ksql client client with host and port defined in ksql.properties.
      *
      * @return the client.
      */
     public static Client createKSQLClient() {
-        ClientOptions options = ClientOptions.create()
-                .setHost(KAFKA_BROKER_IP)
-                .setPort(KAFKA_KSQL_PORT);
-        return Client.create(options);
+        Properties props = new Properties();
+        try {
+            FileInputStream file = new FileInputStream("./ksql.properties");
+            props.load(file);
+            ClientOptions options = ClientOptions.create()
+                    .setHost(props.getProperty("server"))
+                    .setPort(Integer.parseInt(props.getProperty("port")));
+            return Client.create(options);
+
+        } catch (FileNotFoundException e) {
+            System.err.println("Config properties file not found, please be sure you have setup a ksql.properties " +
+                    "file on the same root folder of the jar");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
+
 }
 
