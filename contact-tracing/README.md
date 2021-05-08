@@ -112,7 +112,7 @@ sudo systemctl start mosquitto
 
 **Confluent Platform**
 
-You can follow the Confluent [**guide**]() if you want to setup individually each component, otherwise you can follow the remaining of this section.
+You can follow the Confluent [**guide**](https://docs.confluent.io/5.5.0/quickstart/ce-quickstart.html) if you want to setup individually each component, otherwise, if you want a fully configured setup, you can follow the remaining of this section.
 
 > **❗ IMPORTANT**
 >
@@ -168,13 +168,17 @@ Finally one MQTTSinkConnector with this config:
 
 ![kek](.github/images/mqtt-sink-screen.png)
 
-You should see their status as `Running`, otherwise you can
+You should see their status as `Running`, otherwise you can check the status of the connect container for possible errors by typing:
+
+```bash
+docker logs --tails <number of lines> connect
+```
 
 ## Configuration
 
-**`contact-tracing.c`**
+### **`contact-tracing.c`**
 
-**`KafkaKsqlProducer.jar`**
+### **`KafkaKsqlProducer.jar`**
 
 ## Running
 
