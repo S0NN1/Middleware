@@ -40,6 +40,12 @@ The general Architecture consists into:
 - [**Confluent Platform**](https://www.confluent.io/product/confluent-platform/): deployment of Apache Kafka with a view to enterprise production and distribution.
 - [**Docker**](https://www.docker.com/): easy management of Apache Kafka and Confluent Platform with images and containers.
 
+## Documentation
+
+You can find detailed documentation at:
+- [**contact-tracing.c doxygen**](https://s0nn1.github.io/doxygen-middleware/)
+- [**KafkaKsqlProducer javadocs**](https://s0nn1.github.io/javadoc-middleware/)
+
 ## Requirements
 
 - [Docker](https://docs.docker.com/get-docker/) (remote server).
