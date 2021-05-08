@@ -1,0 +1,196 @@
+\documentclass[table, 12pt]{article}
+
+\usepackage[parfill]{parskip}
+\usepackage[margin=0.59in]{geometry}
+\usepackage{amsmath}
+\usepackage{siunitx}
+
+
+\tolerance=1
+\emergencystretch=\maxdimen
+\hyphenpenalty=10000
+\hbadness=10000
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black
+}
+
+\begin{document}
+\begin{center}
+\fontsize{23pt}{23pt}\selectfont
+Project 4 - Middleware 2020/2021
+
+\fontsize{18pt}{18pt}\selectfont
+A Simple Model for Virus Spreading (Ref. Alessandro Margara)
+
+\fontsize{19pt}{19pt}\selectfont
+Federico Armellini - Luca Pirovano - Niccolò Sonnino
+\end{center}
+
+~\\
+
+\tableofcontents
+
+
+\section{Introduction and assignment}
+\subsection{Description of the project}
+Scientists increasingly use computer simulations to study complex phenomena. In this project, you have to
+implement a program that simulates how a virus spreads over time in a population of individuals. The program
+considers N individuals that move in a rectangular area with linear motion and velocity v (each individual
+following a different direction). Some individuals are initially infected. If an individual remains close to (at least
+one) infected individual for more than 10 minutes, it becomes infected. After 10 days, an infected individual
+recovers and becomes immune. Immune individuals do not become infected and do not infect others. An
+immune individual becomes susceptible again (i.e., it can be infected) after 3 months.
+
+The overall area is split into smaller rectangular sub-areas representing countries. The program outputs, at the
+end of each simulated day, the overall number of susceptible, infected, and immune individuals in each country.
+An individual belongs to a country if it is in that country at the end of the day.
+
+A performance analysis of the proposed solution is appreciated (but not mandatory). In particular, we are
+interested in studies that evaluate (1) how the execution time changes when increasing the number of
+individuals and/or the number of countries in the simulation; (2) how the execution time decreases when
+adding more processing cores/hosts.
+
+\subsection{Assumptions and guidelines}
+ \begin{enumerate}
+ 
+ \item
+ The program takes in input the following parameters
+
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+
+\item N = number of individuals
+\item  I = number of individuals that are initially infected
+\item  W, L = width and length of the rectangular area where individuals move (in meters)
+\item  w, l = width and length of each country (in meters)
+\item  v = moving speed for an individual
+\item  d = maximum spreading distance (in meters): a susceptible individual that remains closer than d to at least one infected individual becomes infected
+\item  t = time step (in seconds): the simulation recomputes the position and status (susceptible,
+infected, immune) of each individual with a temporal granularity of t (simulated) seconds
+\end{itemize} 
+\item 
+You can make any assumptions on the behavior of individuals when they reach the boundaries of the
+area (for instance, they can change direction to guarantee that they remain in the area)
+\end{enumerate}
+
+
+
+\section{Solution Overview}
+\subsection{Architecture chosen}
+MPI
+
+
+
+\subsection{Assumptions and Definitions}
+\begin{enumerate}
+\setlength\itemsep{-0.5em}
+	\item When we refer to the "main mpi process" we mean the one with rank==0
+    \item We assumed that the "3 month" period in order to become susceptible again is equal to 90 days
+    \item Velocity has as a unit of measure "how many blocks a person travels in a period of time equal to the timestep" [blocks/timestep]
+    \item In the source code you may find those 3 words: world, nation, subnation. The world is composed of nations, every nation is assigned to a MPI process and have subnations inside them. To make the analogy, subnations are the ones named "sub-areas representing countries" in the assignment. That has been done in order to equally distribute sub-areas to each MPI process.
+\end{enumerate}
+
+\subsection{General solution}
+\subsubsection{Main}
+
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+\item Checking that the input is valid, if not returns and prints the error.
+\item The main mpi process tries to divide the "world" into countries and to decide how many countries every mpi process will receive.
+\item In every country, based on how many sane and infected people are given at input, the number of sane and infected people is set by the main mpi process.
+\item The main mpi process sends (with "mpi scatter" method) the information summariezed (number of infected and sane people and country id) of countries to every mpi process.
+\item All mpi process enter a for loop (one iteration for each day) where they calculate the map of infection for each day (see "infectionDayStep"), they send their result to the main mpi process with "mpi gather" method and the main mpi process prints them on console output.
+\item "Free" method is called to clean memory allocated all over the software
+\end{itemize}
+
+\subsubsection{infectionDayStep}
+
+For every country a mpi process have to manage, for every step of the timestep, for every people inside a country:
+
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+\item Check, if already infected, enough time has passed in order to heal from the virus
+\item Check people aroud him/her in order to understand, if they are infected, if the person we are analysing becomes infected as well (keeping in mind that there is 3 months to wait if he/her had recovered recently in order to get infected again).
+\end{itemize}
+
+\subsection{Data structures}
+We store the people (and their information) in a list.
+We store the history of contacts a person had with other people in an hash table, indexed based on the id of the individual.
+
+\subsubsection{Individual}
+We store those information about an individual: 
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+\item Rank of the mpi process he/her belongs to
+\item Which sub-area (subnation) he/her belongs to
+\item Id
+\item Position (x and y) related to the subnation he/her belongs to 
+\item If he/her is infected
+\item The timestamp of the last time he/her was infected
+\item The timestamp of the last time he/her recovered from the virus
+\end{itemize}
+
+\subsubsection{Contact history}
+We store those information about the contact history of an individual with a specific person
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+\item Person 1
+\item Person 2
+\item Timestamp of the first time they met
+\item Timestamp of the last time they met
+\end{itemize}
+
+\subsection{Performance evaluation}
+
+\subsubsection{Variables and parameters}
+\begin{flushleft}
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+\item "numSubNationsPerMpiProcess": Based on how big is area of the world and the area of each country, the software assigns to each MPI process an equal amount of subnation. It is equal to circa "$ (W*L/(w*l)) / worldSize $"
+\item "NumPeopleNearIndividual": People near a certain individual, it's based on the distance needed to become infected when you cross path with an infected individual. Assuming people are equally distributed, this number is circa "$ d^4 / (peopleInSubnation * w*l) $"
+\item "HowManyTimeStepsInADay" : "$ 60 * 60 * 24 / t $" where t is the timestamp (see assignment) expressed in seconds.
+\item "peopleInSubnation": we can say it's circa "$ N/(numSubNationsPerMpiProcess * worldSize) $"
+\end{itemize}
+\end{flushleft}
+
+\subsubsection{Equations}
+\begin{flushleft}
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+\item $ OverallComplexity = SetupPhaseComplexity + MainAlgorithmComplexity $
+\item $ SetupPhaseComplexity = CalculateDistributionSubnationsToProcessComplexity +  SplitPeopleComplexity + GenerateMapComplexity $
+\item $ CalculateDistributionSubnationsToProcessComplexity = O(worldSize) + O(numSubnations)$
+\item $ SplitPeopleComplexity = O(worldSize) + O(N) $
+\item $ GenerateMapComplexity = numSubNationsPerMpiProcess * worldSize * ListInsertionComplexity $
+\item $ ListInsertionComplexity = O(1) $ 
+\item $ MainAlgorithmComplexity = worldSize * days * HowManyTimeStepsInADay *  CalculateDayProgressComplexity $ 
+\item $ CalculateDayProgressComplexity = numSubNationsPerMpiProcess * peopleInSubnation * CalculateInvidualVirusStateComplexity $
+\item $ CalculateInvidualVirusStateComplexity = FindRectanguralsNearIndividualComplexity + FindInvidualsInNearRectangles + NumPeopleNearIndividual * FindHistotyBetweetIndividualsComplexity $
+\item $ FindInvidualsInNearRectangles = O(peopleInSubnation) $
+\item $ FindRectanguralsNearIndividualComplexity = distanceToBeInfected^2 * ListInsertionComplexity $ 
+\item $ FindHistotyBetweetIndividualsComplexity = O(1)$
+\end{itemize}
+\end{flushleft}
+
+\subsubsection{Conclusion}
+\begin{flushleft}
+So the overall complexity is, summarized with every step:
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+\item $ O(worldSize) + O(numSubnations) +  O(worldSize) + O(N) + numSubNationsPerMpiProcess * worldSize * O(1) + worldSize * days * HowManyTimeStepsInADay *  numSubNationsPerMpiProcess * peopleInSubnation * (d^2 * O(1) + O(peopleInSubnation) + NumPeopleNearIndividual * O(1)) $
+
+ 
+\item $ worldSize * days *  60 * 60 * 24 / t * (W*L/(w*l)) / worldSize * N/((W*L/(w*l)) / worldSize * worldSize) * (d^2 * O(1) + O(TotalPeople/((W*L/(w*l)) / worldSize * worldSize))+ d^4 / (N/((W*L/(w*l)) / worldSize * worldSize) * w*l) * O(1) ) $
+
+\item $   days *  60 * 60 * 24 / t * (W*L/(w*l))  * N/((W*L/(w*l))) * (d^2 * O(1) + O(TotalPeople/(W*L/(w*l))) + d^4 / (TotalPeople/((W*L/(w*l))) * w*l) * O(1) ) $
+
+\item $ O(days* N^2 /(W*L) * d^4 * (w * l)^2) $ 
+\end{itemize}
+\end{flushleft}
+\end{document}
