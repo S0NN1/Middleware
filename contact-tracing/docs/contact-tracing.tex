@@ -101,7 +101,7 @@ The following list explains each component of the workflow:
 \begin{itemize}
     \item \textbf{Contiki-NG motes}: motes running \texttt{contact-tracing.c} program and emulated in the COOJA simulator or compiled natively.
 
-          They use RPL (Routing Protocol for Low-Power and Lossy Networks) protocol in order exchange between them and MQTT (Message Queue Telemetry Transport) protocol for communicating with the middleware.
+          They use RPL (Routing Protocol for Low-Power and Lossy Networks) protocol in order to exchange messages between them and MQTT (Message Queue Telemetry Transport) protocol for communicating with the middleware.
           Each mote runs three processes:
           \begin{enumerate}
               \item \underline{Broadcast}: this process fires a broadcast UDP message containing the mote's client ID at regular intervals.
@@ -115,7 +115,7 @@ The following list explains each component of the workflow:
     \item \textbf{KSQLdb}: KSQL is a technology developed by Confluent, it allows to keep Kafka streaming versatility and it combines with a SQL language. \\It implements two different structures:
           \begin{enumerate}
               \item \underline{Streams}: continuous queries of streams of data in Kafka topics, they insert the content into the KSQLdb in order to store data. In the implementation two streams were instantiated: one for connections and one for alerts.
-              \item \underline{Tables}: tables are views of streams and represents a collection of evolving facts. Every column specified into the table has a related value from the stream/table used for its creation. The main advantage of using KSQL tables is that updated values coming from streams are overwrote over the previous ones effectively avoiding duplications or outdated values. A table is used for storing connections between a node and the other ones.
+              \item \underline{Tables}: tables are views of streams and represents a collection of evolving facts. Every column specified into the table has a related value from the stream/table used for its creation. The main advantage of using KSQL tables is that updated values coming from streams are overwritten over the previous ones effectively avoiding duplications or outdated values. A table is used for storing connections between a node and the other ones.
           \end{enumerate}
     \item \textbf{KafkaKsqlProducer.jar}: Java program which creates two streams (CONNECTIONS and ALERTS), defines a table (CONNECTION\_TABLE) and instantiates a Kafka producer. Whenever an alert is received into the stream, the jar queries the CONNECTION\_TABLE (continuously updated by the CONNECTION stream) with the client ID contained into the message. The results are client IDs connected previously with that mote and they are used for each ProducerRecord wrote by the Kafka producer and sent to the "kafka-to-mqtt-alerts".
     \item \textbf{MQTTSinkConnector}: Equivalent of the MQTTSourceConnector, it receives messages from a Kafka topic and writes on a MQTT one.
