@@ -176,9 +176,9 @@ docker logs --tails <number of lines> connect
 
 ## Configuration
 
-### **`contact-tracing.c`**
+### **contact-tracing.c**
 
-### **`KafkaKsqlProducer.jar`**
+### **KafkaKsqlProducer.jar**
 
 ## Running
 
