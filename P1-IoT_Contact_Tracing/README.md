@@ -184,10 +184,45 @@ docker logs --tails <number of lines> connect
 
 ### `contact-tracing.c`
 
+You can customize each setting in the #define section of the `contact-tracing.c` file.
+
+
 ### `KafkaKsqlProducer.jar`
+
+> **❗ IMPORTANT**
+>
+> Example of properties file can be found [**here**](configs/)
+
+You can customize logger, producer and ksql client configs by creating `kafka.properties`, `ksql.properties` and `log4j.properties` in the root folder of the jar and running it with:
+
+```bash
+java -Dlog4j.configuration=file:"log4j.properties" -jar  KafkaProducerContactTracing-1.0.jar
+```
 
 ## Running
 
+> **❗ IMPORTANT**
+>
+> In both cases change the CONTIKI variable in the `Makefile` with your contiki-ng absolute path. 
+
 ### Native
 
+Compile and run the `border-router.c` file under `<your-contiki-path>/examples/rpl-border-router/` with:
+
+```bash
+make TARGET=native connect-router
+sudo ./connect-router
+```
+
+Compile and run the `contact-tracing.c` file for each mote you want to run with:
+
+```bash
+make TARGET=native contact-tracing
+./contact-tracing
+```
+
 ### COOJA simulator
+
+Follow this [**guide**](https://github.com/contiki-ng/contiki-ng/wiki/Cooja:-simulating-a-border-router) and then add motes with `contact-tracing.c` and compile TARGET as Cooja.
+
+Otherwise you can use our simulation under [**cooja folder**](contiki/cooja).
