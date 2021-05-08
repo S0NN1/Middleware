@@ -4,11 +4,18 @@
 #include <mpi.h>
 #include <math.h>
 
+
+//Costants from the project assignment
+int minTimeToGetInfected = 10 * 60; //10 minutes
+int minTimeToHeal = 60 * 60 * 24 * 10; //10 days
+int TimeToBecomeSuspceptibleAgain = 60 * 60 * 24 * 90; // 3 months
+
 struct point {
 	int x;
 	int y;
 };
 
+//structure that handles a list and its size
 struct arrayWithSize {
 	void* pList;
 	int currentSize;
@@ -26,8 +33,8 @@ struct individual {
 };
 
 struct contactHistory {
-	int timeInizio;
-	int timeFine;
+	int timeStart;
+	int timeEnd;
 	struct individual* from;
 	struct individual* to;
 };
@@ -74,6 +81,7 @@ void free4(struct nation n) {
 	free3(n.list);
 }
 
+//method that calculate how many subnations the world must be splitted into: the area must be feasible to have a perfect split
 int calculateNumSubnations(int W, int L, int w, int l)
 {
 	float f = (float)W * L;
@@ -97,6 +105,8 @@ int getRandomNumber(int lower, int upper) {
 	return num;
 }
 
+
+//method that assign, for each mpi process, a number of subnations each process will handle
 struct arrayWithSize calculateDistributionSubnationsToProcess(int numProcess, int numSubnations) {
 
 	int* r = malloc(sizeof(int) * numProcess);
@@ -142,20 +152,21 @@ int getMax(struct arrayWithSize a) {
 	return max;
 }
 
+//method that populates a subnation with people, calcutaing how many infected, sane people each nation will get
 struct individualSummaryWithRank* fillPeopleInformation(int numPeople, int numInfected,
-	int numProcess, struct arrayWithSize maxRectanglesForEachProcess, int maxRectanglesPerProcess) {
+	int numProcess, struct arrayWithSize maxRectanglesForEachProcess, int maxSubnationPerProcess) {
 	int sani = numPeople - numInfected;
-	if (maxRectanglesPerProcess < 0)
+	if (maxSubnationPerProcess < 0)
 		return NULL;
 
 	struct individualSummaryWithRank* returnValue =
-		malloc(sizeof(struct individualSummaryWithRank) * numProcess * maxRectanglesPerProcess);
+		malloc(sizeof(struct individualSummaryWithRank) * numProcess * maxSubnationPerProcess);
 
 	for (int i = 0; i < numProcess; i++) {
-		for (int j = 0; j < maxRectanglesPerProcess; j++)
+		for (int j = 0; j < maxSubnationPerProcess; j++)
 		{
-			int k = (i * maxRectanglesPerProcess) + j;
-			returnValue[k].rank = (i * maxRectanglesPerProcess) + j;
+			int k = (i * maxSubnationPerProcess) + j;
+			returnValue[k].rank = (i * maxSubnationPerProcess) + j;
 			returnValue[k].individualSummary.infected = 0;
 			returnValue[k].individualSummary.sane = 0;
 		}
@@ -170,7 +181,7 @@ struct individualSummaryWithRank* fillPeopleInformation(int numPeople, int numIn
 		} while (m2[where1] - 1 < 0);
 
 		int where2 = getRandomNumber(0, m2[where1] - 1);
-		int k = (where1 * maxRectanglesPerProcess) + where2;
+		int k = (where1 * maxSubnationPerProcess) + where2;
 		returnValue[k].individualSummary.infected++;
 	}
 
@@ -181,13 +192,15 @@ struct individualSummaryWithRank* fillPeopleInformation(int numPeople, int numIn
 			where1 = getRandomNumber(0, numProcess - 1);
 		} while (m2[where1] - 1 < 0);
 		int where2 = getRandomNumber(0, m2[where1] - 1);
-		int k = (where1 * maxRectanglesPerProcess) + where2;
+		int k = (where1 * maxSubnationPerProcess) + where2;
 		returnValue[k].individualSummary.sane++;
 	}
 
 	return returnValue;
 }
 
+
+//method that inserts and individual to a list
 struct arrayWithSize insertIndividual(struct arrayWithSize arrayWithSize, struct individual* individual) {
 	while (1)
 	{
@@ -218,6 +231,8 @@ struct arrayWithSize insertIndividual(struct arrayWithSize arrayWithSize, struct
 	}
 }
 
+
+//method that inserts a int to a list
 struct arrayWithSize insertInt(struct arrayWithSize arrayWithSize, int value) {
 	while (1)
 	{
@@ -248,6 +263,8 @@ struct arrayWithSize insertInt(struct arrayWithSize arrayWithSize, int value) {
 	}
 }
 
+
+//method that inserts an individual in a list 
 struct arrayWithSize insertHashIndividual(
 	struct arrayWithSize a,
 	struct individual* p)
@@ -287,6 +304,7 @@ struct arrayWithSize insertHashIndividual(
 	}
 }
 
+//method that inserts a contacthistory in a list
 struct arrayWithSizeAndIndividual* insertContactHistory(struct arrayWithSizeAndIndividual* arrayWithSize, struct contactHistory* vic) {
 	while (1)
 	{
@@ -317,6 +335,8 @@ struct arrayWithSizeAndIndividual* insertContactHistory(struct arrayWithSizeAndI
 	}
 }
 
+
+//method that inserts a subnation in a list
 struct arrayWithSize insertSubnation(struct arrayWithSize arrayWithSize, struct subnation subnation) {
 	while (1)
 	{
@@ -347,6 +367,8 @@ struct arrayWithSize insertSubnation(struct arrayWithSize arrayWithSize, struct 
 	}
 }
 
+
+//method that generates the nation map of a mpi process. Each subnation has a position, a rank and a number of infected and sane individuals.
 struct nation GenerateMap(
 	int rank,
 	struct arrayWithSize howManySubNationsPerProcess,
@@ -410,6 +432,8 @@ struct nation GenerateMap(
 	return n;
 }
 
+
+//method that gets all the people of a nation
 struct arrayWithSize getPeople(struct nation nationItem) {
 	struct arrayWithSize people;
 	people.currentSize = 0;
@@ -429,6 +453,8 @@ struct arrayWithSize getPeople(struct nation nationItem) {
 	return people;
 }
 
+
+//method that prints infected/sane information to the console
 void printInfectedInformation(struct individualSummaryWithRank i2, int maxRectanglesPerProcess, int i) {
 	if (maxRectanglesPerProcess == 1)
 	{
@@ -443,6 +469,7 @@ void printInfectedInformation(struct individualSummaryWithRank i2, int maxRectan
 	}
 }
 
+//method that prints infected/sane information to the console
 void printArray(struct arrayWithSize buffer3, int maxRectanglesPerProcess) {
 	struct individualSummaryWithRank* p2 = buffer3.pList;
 	int totInfectedPartial = 0;
@@ -478,7 +505,8 @@ void printArray(struct arrayWithSize buffer3, int maxRectanglesPerProcess) {
 	printf(">TOT: INFECTED %d, SANE %d\n", (totInfectedTotal), (totSaneTotal));
 }
 
-struct arrayWithSize GetSubnazioni(struct nation nationItem, int rank) {
+//method that gets all the subnation of a nation, given the rank
+struct arrayWithSize GetSubnations(struct nation nationItem, int rank) {
 	struct arrayWithSize r;
 	r.currentSize = 0;
 	r.maxSize = 0;
@@ -496,14 +524,13 @@ struct arrayWithSize GetSubnazioni(struct nation nationItem, int rank) {
 	return r;
 }
 
-int minTimeToGetInfected = 10 * 60; //10 minutes
-int minTimeToHeal = 60 * 60 * 24 * 10; //10 days
-int TimeToBecomeSuspceptibleAgain = 60 * 60 * 24 * 90; // 3 months
-
+//method that, given the coordinates, return the index of the rectangle in a grid (counting cells)
 int rectIndex(int x, int y, int w, int l) {
 	return (x * w) + y;
 }
 
+//method that returns all the cell indexes of the cell near a cell (in a given distance), in a subnation: 
+//it is used to determine near cells of an individual in order to understand if he/her is near infected people.
 struct arrayWithSize findRectangle(struct subnation subnationItem,
 	struct individual* p, int distanceToBeInfected, int rank, int w, int l) {
 	struct arrayWithSize  r;
@@ -527,6 +554,8 @@ struct arrayWithSize findRectangle(struct subnation subnationItem,
 	return r;
 }
 
+
+//method that returns all the people inside a rectangle/cell, given its index
 struct arrayWithSize getPeopleNear(int rectIndex, struct subnation subnationItem, int w, int l) {
 	struct arrayWithSize r;
 	r.currentSize = 0;
@@ -582,7 +611,8 @@ struct arrayWithSizeAndIndividual* getHash(struct arrayWithSize storicoContatti,
 	return NULL;
 }
 
-struct contactHistory* TrovaVicinanza(struct individual* p, struct individual* p2, struct arrayWithSize storicoContatti) {
+//method that finds the contact history of an individual
+struct contactHistory* FindContactHistory(struct individual* p, struct individual* p2, struct arrayWithSize storicoContatti) {
 	struct arrayWithSizeAndIndividual* t1 = getHash(storicoContatti, p);
 
 	if (t1 == NULL)
@@ -603,8 +633,10 @@ struct contactHistory* TrovaVicinanza(struct individual* p, struct individual* p
 	return NULL;
 }
 
+
+
 struct individualSummaryWithRank*
-	calcolaAvanzamentoContagi2(
+	calculateVirus2(
 		struct individualSummaryWithRank* buffer,
 		struct subnation subNazioneItem, int rank,
 		int t, int distanceToBeInfected, struct arrayWithSize people,
@@ -613,45 +645,50 @@ struct individualSummaryWithRank*
 {
 	struct individual** plist = people.pList;
 
-	if (buffer[subnazioneIndex].individualSummary.infected > 0) {
+	if (buffer[subnazioneIndex].individualSummary.infected > 0) { //only if the subnation has infected people we need to calculate the evolution, otherwise it's useless
+
+		//for each person in the subnation
 		for (int ip = 0; ip < people.currentSize; ip++)
 		{
 			if (plist[ip]->subnation != subnazioneIndex)
 				continue;
 
-			if (t * i_t2 >= plist[ip]->lastTimeHeWasInfected + minTimeToHeal && plist[ip]->isInfected == 1) {
+			if (t * i_t2 >= plist[ip]->lastTimeHeWasInfected + minTimeToHeal && plist[ip]->isInfected == 1) { //if he/her is infected and it's time become healthier again
 				plist[ip]->isInfected = 0;
 				buffer[subnazioneIndex].individualSummary.infected--;
 				buffer[subnazioneIndex].individualSummary.sane++;
 				plist[ip]->lastTimeHeRecovered = t * i_t2;
 			}
 
-			if (buffer[subnazioneIndex].individualSummary.infected > 0) {
-				struct arrayWithSize r = findRectangle(subNazioneItem, plist[ip], distanceToBeInfected, rank, w, l);
+			if (buffer[subnazioneIndex].individualSummary.infected > 0) { //only if the subnation has infected people we need to calculate the evolution, otherwise it's useless
+				struct arrayWithSize r = findRectangle(subNazioneItem, plist[ip], distanceToBeInfected, rank, w, l); //rectangles near him/her
 				int* r2 = r.pList;
 				if (r.currentSize > 0) {
-					for (int i = 0, rSize = r.currentSize; i < rSize; i++) {
-						struct arrayWithSize peopleNear = getPeopleNear(r2[i], subNazioneItem, w, l);
+					for (int i = 0, rSize = r.currentSize; i < rSize; i++) { //for each rectangle/cell near him/her
+						struct arrayWithSize peopleNear = getPeopleNear(r2[i], subNazioneItem, w, l); //Get people in that rectangle
 						struct individual** plist2 = peopleNear.pList;
 
-						for (int ip2 = 0; ip2 < peopleNear.currentSize; ip2++) {
+						for (int ip2 = 0; ip2 < peopleNear.currentSize; ip2++) { //for each people in that rectangle
 		
 							struct individual* pc1 = (plist[ip]);
 							struct individual* pc2 = (plist2[ip2]);
 
-							if ((pc1->id != pc2->id && pc1->rank == pc2->rank) && pc2->isInfected)
+							if ((pc1->id != pc2->id && pc1->rank == pc2->rank) && pc2->isInfected) //if the person we have been near is infected
 							{
-								struct contactHistory* vicinanzaItem = TrovaVicinanza(pc1, pc2, storicoContatti);
+								struct contactHistory* vicinanzaItem = FindContactHistory(pc1, pc2, storicoContatti);
 								if (vicinanzaItem == NULL || vicinanzaItem->to == NULL && vicinanzaItem->from == NULL) {
+
+									//first time we encounter this person
+
 									struct contactHistory* v = malloc(sizeof(struct contactHistory));
 									v->from = pc1;
-									v->timeFine = t * i_t2;
-									v->timeInizio = t * i_t2;
+									v->timeEnd = t * i_t2;
+									v->timeStart = t * i_t2;
 									v->to = pc2;
 
 									struct arrayWithSizeAndIndividual* v2 = getHash(storicoContatti, pc1);
 
-
+									//insert contact history with this person
 									if (v2 != NULL) {
 			
 										v2 = insertContactHistory(v2, v);
@@ -665,7 +702,8 @@ struct individualSummaryWithRank*
 										v2 = insertContactHistory(v2, v);
 									}
 
-									if (v->timeFine - v->timeInizio >= minTimeToGetInfected
+									//if we stayed near him/her too much, we become infected
+									if (v->timeEnd - v->timeStart >= minTimeToGetInfected
 										&& !pc1->isInfected && (pc1->lastTimeHeRecovered < 0 || pc1->lastTimeHeRecovered + TimeToBecomeSuspceptibleAgain >= (t * i_t2)))
 									{
 										pc1->isInfected = 1;
@@ -675,9 +713,13 @@ struct individualSummaryWithRank*
 									}
 								}
 								else {
-									vicinanzaItem->timeFine = t * i_t2;
 
-									if (vicinanzaItem->timeFine - vicinanzaItem->timeInizio >= minTimeToGetInfected
+									//we have encountered this person before
+
+									vicinanzaItem->timeEnd = t * i_t2;
+
+									//if we stayed near him/her too much, we become infected
+									if (vicinanzaItem->timeEnd - vicinanzaItem->timeStart >= minTimeToGetInfected
 										&& !pc1->isInfected && (pc1->lastTimeHeRecovered < 0 || pc1->lastTimeHeRecovered + TimeToBecomeSuspceptibleAgain >= (t * i_t2))) {
 										pc1->isInfected = 1;
 										buffer[subnazioneIndex].individualSummary.sane--;
@@ -693,6 +735,7 @@ struct individualSummaryWithRank*
 		}
 	}
 
+	//let's move all people to a random position, based on their velocity
 	for (int i = 0; i < people.currentSize; i++)
 	{
 		int moveX = getRandomNumber(0, 1);
@@ -732,7 +775,7 @@ struct individualSummaryWithRank*
 	return buffer;
 }
 
-struct individualSummaryWithRank* calcolaAvanzamentoContagi(
+struct individualSummaryWithRank* calculateVirus1(
 	struct individualSummaryWithRank* buffer,
 	struct nation nationItem,
 	int rank, int t, int distanceToBeInfected,
@@ -743,15 +786,19 @@ struct individualSummaryWithRank* calcolaAvanzamentoContagi(
 
 	printf("\n");
 
+	//calculate how many "timesteps" we need to do in a day, based on the timestamp "t".
 	int t2 = 60 * 60 * 24 / t;
 
-	struct arrayWithSize subnazioneArrayList = GetSubnazioni(nationItem, rank);
+	struct arrayWithSize subnazioneArrayList = GetSubnations(nationItem, rank);
 	struct subnation* p2 = subnazioneArrayList.pList;
-	for (int sbi = 0; sbi < subnazioneArrayList.currentSize; sbi++) {
+
+	//for each subnation
+	for (int sbi = 0; sbi < subnazioneArrayList.currentSize; sbi++) { 
 		struct subnation sb2 = p2[sbi];
 
+		//for each timestep in a day
 		for (int i = 0; i < t2; i++) {
-			buffer = calcolaAvanzamentoContagi2(buffer, sb2,
+			buffer = calculateVirus2(buffer, sb2,
 				rank, t, distanceToBeInfected, people,
 				storicoContatti, w, l, i, sbi, velocity);
 
@@ -888,7 +935,7 @@ int main(int argc, char** argv) {
 		return;
 	}
 
-	int subNationsNum = calculateNumSubnations(dimWorld.x, dimWorld.y, dimSubNation.x, dimSubNation.y);
+	int subNationsNum = calculateNumSubnations(dimWorld.x, dimWorld.y, dimSubNation.x, dimSubNation.y); //calculate how many subnations the world will be divided into
 	int sizeOfIndividualSummaryWithRank = sizeof(struct individualSummaryWithRank);
 	if (subNationsNum < 0)
 	{
@@ -898,12 +945,13 @@ int main(int argc, char** argv) {
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
+	//calculate how much subnations each mpi process will get
 	struct arrayWithSize howManySubNationsPerProcess =
 		calculateDistributionSubnationsToProcess(world_size, subNationsNum);
 
 
-	int maxRectanglesPerProcess = getMax(howManySubNationsPerProcess);
-	if (maxRectanglesPerProcess < 0)
+	int maxSubnationPerProcess = getMax(howManySubNationsPerProcess);
+	if (maxSubnationPerProcess < 0)
 	{
 		MPI_Finalize();
 		return;
@@ -917,8 +965,10 @@ int main(int argc, char** argv) {
 	struct individualSummaryWithRank* buffer3 = NULL;
 	if (my_rank == 0)
 	{
+
+		//generate how many infected/sane each subnation will get
 		start = fillPeopleInformation(numPeople, numInfected, world_size,
-			howManySubNationsPerProcess, maxRectanglesPerProcess);
+			howManySubNationsPerProcess, maxSubnationPerProcess);
 
 		if (start == NULL)
 		{
@@ -927,31 +977,33 @@ int main(int argc, char** argv) {
 			return;
 		}
 
-		buffer3 = malloc(sizeof(struct individualSummaryWithRank) * world_size * maxRectanglesPerProcess);
+		buffer3 = malloc(sizeof(struct individualSummaryWithRank) * world_size * maxSubnationPerProcess);
 	}
 
-	buffer = malloc(sizeof(struct individualSummaryWithRank) * maxRectanglesPerProcess);
+	buffer = malloc(sizeof(struct individualSummaryWithRank) * maxSubnationPerProcess);
 
 
 	// Scatter the random numbers from process 0 to all processes
 	int scale = sizeof(struct individualSummaryWithRank) / sizeof(int);
-	int dimScatter = maxRectanglesPerProcess * scale;
+	int dimScatter = maxSubnationPerProcess * scale;
 	MPI_Scatter(start, dimScatter, MPI_INT,
 		buffer, dimScatter, MPI_INT,
 		0, MPI_COMM_WORLD);
 
 	struct nation nationItem;
 
+	//each mpi process generates its nation map and populates its people into the nation/subnations
 	nationItem = GenerateMap(my_rank, howManySubNationsPerProcess,
-		dimSubNation.x, dimSubNation.y, buffer, maxRectanglesPerProcess);
+		dimSubNation.x, dimSubNation.y, buffer, maxSubnationPerProcess);
 
+	//get all people in the nation
 	struct arrayWithSize people = getPeople(nationItem);
 
-	struct arrayWithSize hashStoricoVar;
-	hashStoricoVar.currentSize = dimHash;
-	hashStoricoVar.maxSize = hashStoricoVar.currentSize;
-	hashStoricoVar.pList = (struct arrayWithSize*)malloc(sizeof(struct arrayWithSize) * hashStoricoVar.maxSize);
-	struct arrayWithSize* sb3 = hashStoricoVar.pList;
+	struct arrayWithSize hashHistoryVar;
+	hashHistoryVar.currentSize = dimHash;
+	hashHistoryVar.maxSize = hashHistoryVar.currentSize;
+	hashHistoryVar.pList = (struct arrayWithSize*)malloc(sizeof(struct arrayWithSize) * hashHistoryVar.maxSize);
+	struct arrayWithSize* sb3 = hashHistoryVar.pList;
 	for (int i = 0; i < dimHash; i++)
 	{
 		sb3[i].currentSize = 0;
@@ -959,27 +1011,29 @@ int main(int argc, char** argv) {
 		sb3[i].pList = NULL;
 	}
 
+	//for each day
 	for (int i = -1; i < days; i++)
 	{
-		if (i >= 0)
+		if (i >= 0) //we use this to print info "at the day of the day 0", so at the start of the run
 		{
-			buffer = calcolaAvanzamentoContagi(buffer, nationItem,
-				my_rank, timeStep, distanceToBeInfected, people, hashStoricoVar, dimSubNation.x, dimSubNation.y, velocity);
+			buffer = calculateVirus1(buffer, nationItem,
+				my_rank, timeStep, distanceToBeInfected, people, hashHistoryVar, dimSubNation.x, dimSubNation.y, velocity);
 		}
 
-		MPI_Gather(buffer, maxRectanglesPerProcess * scale, MPI_INT,
-			buffer3, maxRectanglesPerProcess * scale, MPI_INT,
+		MPI_Gather(buffer, maxSubnationPerProcess * scale, MPI_INT,
+			buffer3, maxSubnationPerProcess * scale, MPI_INT,
 			0, MPI_COMM_WORLD);
 
+		//main mpi process prints results
 		if (my_rank == 0)
 		{
 			printf("End of the day [%d]:\n", (i + 1));
 
 			struct arrayWithSize buffer3_toprint;
 			buffer3_toprint.pList = buffer3;
-			buffer3_toprint.currentSize = maxRectanglesPerProcess * world_size;
+			buffer3_toprint.currentSize = maxSubnationPerProcess * world_size;
 			buffer3_toprint.maxSize = buffer3_toprint.currentSize;
-			printArray(buffer3_toprint, maxRectanglesPerProcess);
+			printArray(buffer3_toprint, maxSubnationPerProcess);
 		}
 
 		MPI_Barrier(MPI_COMM_WORLD);
@@ -992,10 +1046,9 @@ int main(int argc, char** argv) {
 	}
 
 	free2(buffer);
-
 	free3(howManySubNationsPerProcess);
 
-	struct arrayWithSize* a = hashStoricoVar.pList;
+	struct arrayWithSize* a = hashHistoryVar.pList;
 	for (int i = 0; i < dimHash; i++)
 	{
 		struct arrayWithSizeAndIndividual* b = a[i].pList;
