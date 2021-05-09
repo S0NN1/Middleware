@@ -43,7 +43,7 @@ The general Architecture consists into:
 ## Documentation
 
 You can find detailed documentation at:
-- [**contact-tracing.c doxygen**](https://s0nn1.github.io/doxygen-middleware/)
+- [**contact-tracing.c doxygen**](https://s0nn1.gitlab.io/doxygen-middleware/)
 - [**KafkaKsqlProducer javadocs**](https://s0nn1.github.io/javadoc-middleware/)
 
 ## Requirements
