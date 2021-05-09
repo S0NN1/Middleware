@@ -61,7 +61,7 @@ In order to work Contiki-NG needs a few dependencies, you can use different opti
 
 - Docker image: [here](https://github.com/contiki-ng/contiki-ng/wiki/Docker).
 - Native toolchain installation (Linux): [here](https://github.com/contiki-ng/contiki-ng/wiki/Toolchain-installation-on-Linux)
-- Virtual Image running on Virtualbox: [here]()
+- Virtual Image running on Virtualbox: [here](https://polimi365-my.sharepoint.com/:u:/g/personal/10569272_polimi_it/EasqwVBaFQJAr_lgitRMY0ABA4KJb9zs0aeUxPafVhEtjQ?e=3qng6A)
 
 Assuming you have chosen the third option, after running the VM you need to install Contiki-NG repo by executing the following commands:
 
