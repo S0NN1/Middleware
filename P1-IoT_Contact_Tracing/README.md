@@ -191,7 +191,7 @@ You can customize each setting in the #define section of the `contact-tracing.c`
 
 > **❗ IMPORTANT**
 >
-> Example of properties file can be found [**here**](configs/)
+> Example of properties files can be found [**here**](configs/)
 
 You can customize logger, producer and ksql client configs by creating `kafka.properties`, `ksql.properties` and `log4j.properties` in the root folder of the jar and running it with:
 
