@@ -1,42 +1,61 @@
 \documentclass[table, 12pt]{article}
-
-\usepackage[parfill]{parskip}
-\usepackage[margin=0.59in]{geometry}
-\usepackage{amsmath}
-\usepackage{siunitx}
-
-
-\tolerance=1
-\emergencystretch=\maxdimen
-\hyphenpenalty=10000
-\hbadness=10000
-
+\usepackage{graphicx}
+\usepackage[T1]{fontenc}
+\usepackage{tocloft}
+\usepackage{caption}
 \usepackage{hyperref}
-\hypersetup{
-    colorlinks,
-    citecolor=black,
-    filecolor=black,
-    linkcolor=black,
-    urlcolor=black
-}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{pdfpages}
+\usepackage{pdflscape}
+\usepackage{textpos}
+\usepackage{scrhack}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{tasks}
+\usepackage{tabularx}
+\usepackage{titlesec}
+\usepackage{listing}
+\usepackage{graphicx}
+
+
+\titleformat{\paragraph}
+{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}
+{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
 
 \begin{document}
-\begin{center}
-\fontsize{23pt}{23pt}\selectfont
-Project 4 - Middleware 2020/2021
-
-\fontsize{18pt}{18pt}\selectfont
-A Simple Model for Virus Spreading (Ref. Alessandro Margara)
-
-\fontsize{19pt}{19pt}\selectfont
-Federico Armellini - Luca Pirovano - Niccolò Sonnino
-\end{center}
-
-~\\
-
-\tableofcontents
-
-
+	\begin{titlepage}
+		\centering
+		{\scshape\large AY 2020/2021 \par}
+		\vfill
+		\includegraphics[width=100pt]{assets/logo-polimi-new}\par\vspace{1cm}
+		{\scshape\LARGE Politecnico di Milano \par}
+		\vspace{1.5cm}
+		{\huge\bfseries Middleware Technologies\\Model for Virus Spreading\par}
+		\vspace{2cm}
+		{\Large {Federico Armellini\quad Luca Pirovano\quad Nicolò Sonnino}\par}
+		\vfill
+		{\large Professor\par
+			Alessandro \textsc{Margara}}
+		\vfill
+		{\large \textbf{Version 1.1}\\ \today \par}
+	\end{titlepage}
+	\hypersetup{%
+		pdfborder = {0 0 0}
+	}
+	\thispagestyle{plain}
+	\pagenumbering{gobble}
+	\mbox{}
+	\newpage
+	\pagenumbering{roman}
+	\tableofcontents
+	\newpage
+	\pagenumbering{arabic}
+	
+	
 \section{Introduction and assignment}
 \subsection{Description of the project}
 Scientists increasingly use computer simulations to study complex phenomena. In this project, you have to
