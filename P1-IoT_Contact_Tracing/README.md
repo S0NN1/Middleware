@@ -40,6 +40,12 @@ The general Architecture consists into:
 - [**Confluent Platform**](https://www.confluent.io/product/confluent-platform/): deployment of Apache Kafka with a view to enterprise production and distribution.
 - [**Docker**](https://www.docker.com/): easy management of Apache Kafka and Confluent Platform with images and containers.
 
+## Documentation
+
+You can find detailed documentation at:
+- [**contact-tracing.c doxygen**](https://s0nn1.gitlab.io/doxygen-middleware/)
+- [**KafkaKsqlProducer javadocs**](https://s0nn1.github.io/javadoc-middleware/)
+
 ## Requirements
 
 - [Docker](https://docs.docker.com/get-docker/) (remote server).
@@ -55,7 +61,7 @@ In order to work Contiki-NG needs a few dependencies, you can use different opti
 
 - Docker image: [here](https://github.com/contiki-ng/contiki-ng/wiki/Docker).
 - Native toolchain installation (Linux): [here](https://github.com/contiki-ng/contiki-ng/wiki/Toolchain-installation-on-Linux)
-- Virtual Image running on Virtualbox: [here]()
+- Virtual Image running on Virtualbox: [here](https://polimi365-my.sharepoint.com/:u:/g/personal/10569272_polimi_it/EasqwVBaFQJAr_lgitRMY0ABA4KJb9zs0aeUxPafVhEtjQ?e=3qng6A)
 
 Assuming you have chosen the third option, after running the VM you need to install Contiki-NG repo by executing the following commands:
 
@@ -178,10 +184,45 @@ docker logs --tails <number of lines> connect
 
 ### `contact-tracing.c`
 
+You can customize each setting in the #define section of the `contact-tracing.c` file.
+
+
 ### `KafkaKsqlProducer.jar`
+
+> **❗ IMPORTANT**
+>
+> Example of properties files can be found [**here**](configs/)
+
+You can customize logger, producer and ksql client configs by creating `kafka.properties`, `ksql.properties` and `log4j.properties` in the root folder of the jar and running it with:
+
+```bash
+java -Dlog4j.configuration=file:"log4j.properties" -jar  KafkaProducerContactTracing-1.0.jar
+```
 
 ## Running
 
+> **❗ IMPORTANT**
+>
+> In both cases change the CONTIKI variable in the `Makefile` with your contiki-ng absolute path. 
+
 ### Native
 
+Compile and run the `border-router.c` file under `<your-contiki-path>/examples/rpl-border-router/` with:
+
+```bash
+make TARGET=native connect-router
+sudo ./connect-router
+```
+
+Compile and run the `contact-tracing.c` file for each mote you want to run with:
+
+```bash
+make TARGET=native contact-tracing
+./contact-tracing
+```
+
 ### COOJA simulator
+
+Follow this [**guide**](https://github.com/contiki-ng/contiki-ng/wiki/Cooja:-simulating-a-border-router) and then add motes with `contact-tracing.c` and compile TARGET as Cooja.
+
+Otherwise you can use our simulation under [**cooja folder**](contiki/cooja).
