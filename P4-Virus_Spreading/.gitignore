@@ -1,3 +1,6 @@
+out
+hostfile
+
 ### LaTeX ###
 ## Core latex/pdflatex auxiliary files:
 *.aux
