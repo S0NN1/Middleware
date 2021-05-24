@@ -3,15 +3,21 @@ package it.polimi.middlewaretechfordistsys.model;
 import java.util.ArrayList;
 
 public class Top10Countries {
-    ArrayList<Country> countryList = new ArrayList<>();
-    public Integer day;
 
+    //Fields
+    @SuppressWarnings("unused")
+    public final Integer day;
+    final ArrayList<Country> countryList = new ArrayList<>();
+
+    //Constructor
     public Top10Countries(int day){
         this.day = day;
     }
 
+    //Constants
     final int tenCountries = 10;
 
+    //Update method
     public void Update(Country country) {
         Integer whereToInsert = FindWhereToInsert(country.movingAverageIncrease);
         if (countryList.size()<tenCountries){
@@ -50,7 +56,7 @@ public class Top10Countries {
 
         int low  = 0;
         int high = lenArray - 1;
-        int mid = 0;
+        int mid;
 
 
         while (low <= high) {
@@ -78,29 +84,17 @@ public class Top10Countries {
 
         return null;
     }
-
-    public String padLeftZeros(String inputString, int length) {
-        if (inputString.length() >= length) {
-            return inputString;
-        }
-        StringBuilder sb = new StringBuilder();
-        while (sb.length() < length - inputString.length()) {
-            sb.append('0');
-        }
-        sb.append(inputString);
-
-        return sb.toString();
-    }
-
+    
     public void print() {
-        if (countryList != null){
-            for (int i=0; i<this.countryList.size(); i++){
-                Country country = this.countryList.get(i);
-                String p = Integer.toString((i+1));
+        for (int i=0; i<this.countryList.size(); i++){
+            Country country = this.countryList.get(i);
+            String p = Integer.toString((i+1));
 
-                String cr = Integer.toString(country.countryRank);
-                System.out.println("PositionInHighscore: "+padLeftZeros(p, 2)+" | CountryRank: "+padLeftZeros(cr,2)+" | MovingAverage: " + country.movingAverageValue);
-            }
+            String cr = Integer.toString(country.countryRank);
+            System.out.println(
+                    "PositionInHighscore: "+ it.polimi.middlewaretechfordistsys.utils.LogUtils.padLeftZeros(p, 2)+
+                    " | CountryRank: "+it.polimi.middlewaretechfordistsys.utils.LogUtils.padLeftZeros(cr,2)+
+                    " | MovingAverageIncrease: " + country.movingAverageIncrease);
         }
     }
 }

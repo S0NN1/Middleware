@@ -4,17 +4,12 @@ import java.util.*;
 
 import it.polimi.middlewaretechfordistsys.model.Country;
 import it.polimi.middlewaretechfordistsys.model.Top10Countries;
-import org.apache.hadoop.util.hash.Hash;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.RelationalGroupedDataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 import it.polimi.middlewaretechfordistsys.utils.LogUtils;
-import scala.Int;
 
 import static org.apache.spark.sql.functions.*;
 
@@ -30,7 +25,9 @@ import static org.apache.spark.sql.functions.*;
  * Q3. Print all the accounts with a negative balance
  */
 public class Covid19CaseCount {
-    private static final boolean useCache = true;
+
+    static final HashMap<Integer, Top10Countries> highscore = new HashMap<>();
+    static final HashMap<Integer, HashMap<Integer, Country>> query1and2Result = new HashMap<>(); //indexed for days, then for countries
 
     public static void main(String[] args) {
         LogUtils.setLogLevel();
@@ -44,15 +41,7 @@ public class Covid19CaseCount {
                 .appName("Covid19")
                 .getOrCreate();
 
-
-        final List<StructField> mySchemaFields = new ArrayList<>();
-        mySchemaFields.add(DataTypes.createStructField("day", DataTypes.IntegerType, false));
-        mySchemaFields.add(DataTypes.createStructField("rank", DataTypes.IntegerType, false));
-        mySchemaFields.add(DataTypes.createStructField("infectedValue", DataTypes.IntegerType, false));
-        mySchemaFields.add(DataTypes.createStructField("saneValue", DataTypes.IntegerType, false));
-        mySchemaFields.add(DataTypes.createStructField("infectedIncrement", DataTypes.IntegerType, false));
-        mySchemaFields.add(DataTypes.createStructField("saneIncrement", DataTypes.IntegerType, false));
-        final StructType mySchema = DataTypes.createStructType(mySchemaFields);
+        StructType mySchema = it.polimi.middlewaretechfordistsys.model.Schema.getSchema();
 
         final Dataset<Row> covidData = spark
                 .read()
@@ -62,19 +51,9 @@ public class Covid19CaseCount {
                 .csv(filePath + "resources/csv/data.csv");
 
 
-
         final int maxDay = covidData.select(max("day")).first().getInt(0);
         final int maxCountries = covidData.select(max("rank")).first().getInt(0);
         final int sevenDays = 7;
-
-
-        System.out.println(maxDay);
-
-
-        //Query1 & Query 2 & Query 3
-        HashMap<Integer, Top10Countries> highscore = new HashMap<>();
-        HashMap<Integer, HashMap<Integer, Country>> query1and2Result = new HashMap<>(); //indexed for days, then for countries
-        
 
         for (int i=0; i<maxDay; i++)
         {
@@ -82,8 +61,9 @@ public class Covid19CaseCount {
             query1and2Result.put(i, new HashMap<>());
         }
 
+        //Calculation for Query1 & Query2 & Query3
         for (int rankId = 0; rankId<maxCountries; rankId++) {
-            System.out.println("Country:" + rankId);
+
             int[] newReportedCases = new int[sevenDays];
 
             Dataset<Row> rank= covidData.where("rank="+rankId);
@@ -92,83 +72,80 @@ public class Covid19CaseCount {
 
             for (int i = 0; i < sevenDays; i++) {
                 newReportedCases[i] = rank.where("day=" + i).select("infectedIncrement").first().getInt(0);
-                //System.out.println(newReportedCases[i]);
 
                 int[] newReportedCases2 = new int[i+1];
                 System.arraycopy(newReportedCases, 0, newReportedCases2, 0, i + 1);
 
-                Double movingAverage = Arrays.stream(newReportedCases2).average().getAsDouble();
-
-
-
-                Double maPercentageIncrease = (movingAverage / previousMa) * 100;
-
-                Country country = new Country(rankId, movingAverage, maPercentageIncrease);
-
-                Top10Countries top10Countries = highscore.get(i);
-                if (top10Countries != null) {
-                    top10Countries.Update(country);
-                }
-
-                query1and2Result.get(i).put(rankId,country);
-
-                previousMa = movingAverage;
+                previousMa = CalculateValuesAndReturnMovingAverage(rankId, previousMa, i, newReportedCases2);
             }
 
             for (int k = sevenDays; k<maxDay; k++){
-
+                //noinspection SuspiciousSystemArraycopy
                 System.arraycopy(newReportedCases, 1, newReportedCases, 0, sevenDays-1);
 
                 newReportedCases[sevenDays-1] =  rank.where("day=" + k).select("infectedIncrement").first().getInt(0);
 
-                Double movingAverage = Arrays.stream(newReportedCases).average().getAsDouble();
-
-                Double maPercentageIncrease = (movingAverage / previousMa) * 100;
-
-                Country country = new Country(rankId, movingAverage, maPercentageIncrease);
-
-                Top10Countries top10Countries = highscore.get(k);
-                if (top10Countries != null) {
-                    top10Countries.Update(country);
-                }
-
-                query1and2Result.get(k).put(rankId,country);
-
-
-                previousMa = movingAverage;
+                previousMa = CalculateValuesAndReturnMovingAverage(rankId, previousMa, k, newReportedCases);
             }
         }
 
-
-        //Print Query 1
+        //Print Query1
+        System.out.println("Query 1");
         for (int i=0; i<maxDay; i++) {
             HashMap<Integer, Country> h1 = query1and2Result.get(i);
             for (int j=0; j<maxCountries; j++) {
                 Country country = h1.get(j);
-                System.out.println("rank: " + country.countryRank + " day: " + i + " ma:" + country.movingAverageValue);
+                System.out.println("rank: " + country.countryRank + " day: " + i + " ma: " + country.movingAverageValue);
             }
         }
+        System.out.println();
 
-        //Print Query 2
+        //Print Query2
+        System.out.println("Query 2");
         for (int i=0; i<maxDay; i++) {
             HashMap<Integer, Country> h1 = query1and2Result.get(i);
             for (int j=0; j<maxCountries; j++) {
                 Country country = h1.get(j);
-                System.out.println("rank: " + country.countryRank + "day: " + i + " perc_ma_inc:" + country.movingAverageIncrease + "%");
+                System.out.println("rank: " + country.countryRank + " day: " + i + " perc_ma_inc: " + country.movingAverageIncrease + "%");
             }
         }
+        System.out.println();
 
-        //Print Query 3
+        //Print Query3
+        System.out.println("Query 3");
         for (int i=0; i<maxDay; i++)
         {
             System.out.println("Day " + i);
             highscore.get(i).print();
-            System.out.println("");
+            System.out.println();
         }
-
+        System.out.println();
 
 
         spark.close();
 
+    }
+
+    private static Double CalculateValuesAndReturnMovingAverage(int rankId, Double previousMa, int currentDay, int[] newReportedCases) {
+        OptionalDouble movingAverageOptional = Arrays.stream(newReportedCases).average();
+        if (movingAverageOptional.isPresent()) {
+
+            Double movingAverage = movingAverageOptional.getAsDouble();
+
+            Double maPercentageIncrease = (movingAverage / previousMa) * 100;
+
+            Country country = new Country(rankId, movingAverage, maPercentageIncrease);
+
+            Top10Countries top10Countries = highscore.get(currentDay);
+            if (top10Countries != null) {
+                top10Countries.Update(country);
+            }
+
+            query1and2Result.get(currentDay).put(rankId, country);
+
+            return movingAverage;
+        }
+
+        return null;
     }
 }
