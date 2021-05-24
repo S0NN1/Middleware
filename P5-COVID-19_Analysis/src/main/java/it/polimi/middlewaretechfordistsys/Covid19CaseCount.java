@@ -73,11 +73,13 @@ public class Covid19CaseCount {
 
         //Query1 & Query 2 & Query 3
         HashMap<Integer, Top10Countries> highscore = new HashMap<>();
-        HashMap<Integer, HashMap<Integer, Country>> query1and2Result;
+        HashMap<Integer, HashMap<Integer, Country>> query1and2Result = new HashMap<>(); //indexed for days, then for countries
+        
 
         for (int i=0; i<maxDay; i++)
         {
             highscore.put(i, new Top10Countries(i));
+            query1and2Result.put(i, new HashMap<>());
         }
 
         for (int rankId = 0; rankId<maxCountries; rankId++) {
@@ -96,17 +98,20 @@ public class Covid19CaseCount {
                 System.arraycopy(newReportedCases, 0, newReportedCases2, 0, i + 1);
 
                 Double movingAverage = Arrays.stream(newReportedCases2).average().getAsDouble();
-                System.out.println("rank: " + rankId + " day: " + i + " ma:" + movingAverage);
+
 
 
                 Double maPercentageIncrease = (movingAverage / previousMa) * 100;
 
+                Country country = new Country(rankId, movingAverage, maPercentageIncrease);
+
                 Top10Countries top10Countries = highscore.get(i);
                 if (top10Countries != null) {
-                    top10Countries.Update(rankId, movingAverage, maPercentageIncrease);
+                    top10Countries.Update(country);
                 }
 
-                System.out.println("rank: " + rankId + " day: " + i + " perc_ma_inc:" + maPercentageIncrease + "%");
+                query1and2Result.get(i).put(rankId,country);
+
                 previousMa = movingAverage;
             }
 
@@ -117,21 +122,41 @@ public class Covid19CaseCount {
                 newReportedCases[sevenDays-1] =  rank.where("day=" + k).select("infectedIncrement").first().getInt(0);
 
                 Double movingAverage = Arrays.stream(newReportedCases).average().getAsDouble();
-                System.out.println("rank: " + rankId + "day: " + k + " ma:" + movingAverage);
 
                 Double maPercentageIncrease = (movingAverage / previousMa) * 100;
 
+                Country country = new Country(rankId, movingAverage, maPercentageIncrease);
+
                 Top10Countries top10Countries = highscore.get(k);
                 if (top10Countries != null) {
-                    top10Countries.Update(rankId, movingAverage, maPercentageIncrease);
+                    top10Countries.Update(country);
                 }
 
-                System.out.println("rank: " + rankId + "day: " + k + " perc_ma_inc:" + maPercentageIncrease + "%");
+                query1and2Result.get(k).put(rankId,country);
+
+
                 previousMa = movingAverage;
             }
         }
 
 
+        //Print Query 1
+        for (int i=0; i<maxDay; i++) {
+            HashMap<Integer, Country> h1 = query1and2Result.get(i);
+            for (int j=0; j<maxCountries; j++) {
+                Country country = h1.get(j);
+                System.out.println("rank: " + country.countryRank + " day: " + i + " ma:" + country.movingAverageValue);
+            }
+        }
+
+        //Print Query 2
+        for (int i=0; i<maxDay; i++) {
+            HashMap<Integer, Country> h1 = query1and2Result.get(i);
+            for (int j=0; j<maxCountries; j++) {
+                Country country = h1.get(j);
+                System.out.println("rank: " + country.countryRank + "day: " + i + " perc_ma_inc:" + country.movingAverageIncrease + "%");
+            }
+        }
 
         //Print Query 3
         for (int i=0; i<maxDay; i++)

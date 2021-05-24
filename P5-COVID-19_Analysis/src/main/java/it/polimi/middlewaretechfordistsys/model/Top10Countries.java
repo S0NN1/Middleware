@@ -12,15 +12,15 @@ public class Top10Countries {
 
     final int tenCountries = 10;
 
-    public void Update(int countryRank, Double movingAverageValue, Double movingAverageIncrease) {
-        Integer whereToInsert = FindWhereToInsert(movingAverageIncrease);
+    public void Update(Country country) {
+        Integer whereToInsert = FindWhereToInsert(country.movingAverageIncrease);
         if (countryList.size()<tenCountries){
 
             if (whereToInsert == null) {
-                countryList.add(new Country(countryRank, movingAverageValue, movingAverageIncrease));
+                countryList.add(country);
             }
             else {
-                countryList.add(whereToInsert, new Country(countryRank, movingAverageValue, movingAverageIncrease));
+                countryList.add(whereToInsert, country);
             }
             return;
         }
@@ -39,7 +39,7 @@ public class Top10Countries {
             countryList.set(i, countryList.get(i-1));
         }
 
-        countryList.set(whereToInsert, new Country(countryRank, movingAverageValue, movingAverageIncrease));
+        countryList.set(whereToInsert, country);
     }
 
     private Integer FindWhereToInsert(Double movingAverageIncrease) {
