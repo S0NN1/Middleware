@@ -1,8 +1,5 @@
 package it.polimi.middlewaretechfordistsys.model;
 
-import scala.Int;
-
-import java.awt.*;
 import java.util.ArrayList;
 
 public class Top10Countries {
@@ -13,16 +10,17 @@ public class Top10Countries {
         this.day = day;
     }
 
+    final int tenCountries = 10;
 
-    public void Update(int countryRank, Double movingAverage) {
-        Integer whereToInsert = FindWhereToInsert(movingAverage);
-        if (countryList.size()<10){
+    public void Update(int countryRank, Double movingAverageValue, Double movingAverageIncrease) {
+        Integer whereToInsert = FindWhereToInsert(movingAverageIncrease);
+        if (countryList.size()<tenCountries){
 
             if (whereToInsert == null) {
-                countryList.add(new Country(countryRank, movingAverage));
+                countryList.add(new Country(countryRank, movingAverageValue, movingAverageIncrease));
             }
             else {
-                countryList.add(whereToInsert, new Country(countryRank, movingAverage));
+                countryList.add(whereToInsert, new Country(countryRank, movingAverageValue, movingAverageIncrease));
             }
             return;
         }
@@ -31,7 +29,7 @@ public class Top10Countries {
             return;
         }
 
-        if (whereToInsert >= 10)
+        if (whereToInsert >= tenCountries)
         {
             return;
         }
@@ -41,10 +39,10 @@ public class Top10Countries {
             countryList.set(i, countryList.get(i-1));
         }
 
-        countryList.set(whereToInsert, new Country(countryRank, movingAverage));
+        countryList.set(whereToInsert, new Country(countryRank, movingAverageValue, movingAverageIncrease));
     }
 
-    private Integer FindWhereToInsert(Double movingAverage) {
+    private Integer FindWhereToInsert(Double movingAverageIncrease) {
         int lenArray = countryList.size();
         if (lenArray <= 0)
             return 0;
@@ -58,27 +56,22 @@ public class Top10Countries {
         while (low <= high) {
             mid = (high + low) / 2;
 
-            //If x is greater, ignore left half
-            if (countryList.get(mid).movingAverage > movingAverage ){
+            if (countryList.get(mid).movingAverageIncrease > movingAverageIncrease ){
                 low = mid + 1;
             }
-
-            //If x is smaller, ignore right half
-            else if  (countryList.get(mid).movingAverage  < movingAverage) {
+            else if  (countryList.get(mid).movingAverageIncrease < movingAverageIncrease) {
                 high = mid - 1;
             }
-
-            //means x is present at mid
             else{
                 return mid;
             }
         }
 
-        if (movingAverage > countryList.get(0).movingAverage)
+        if (movingAverageIncrease > countryList.get(0).movingAverageIncrease)
         {
             return 0;
         }
-        if (movingAverage < countryList.get(lenArray-1).movingAverage)
+        if (movingAverageIncrease < countryList.get(lenArray-1).movingAverageIncrease)
         {
             return lenArray;
         }
@@ -106,7 +99,7 @@ public class Top10Countries {
                 String p = Integer.toString((i+1));
 
                 String cr = Integer.toString(country.countryRank);
-                System.out.println("PositionInHighscore: "+padLeftZeros(p, 2)+" | CountryRank: "+padLeftZeros(cr,2)+" | MovingAverage: " + country.movingAverage);
+                System.out.println("PositionInHighscore: "+padLeftZeros(p, 2)+" | CountryRank: "+padLeftZeros(cr,2)+" | MovingAverage: " + country.movingAverageValue);
             }
         }
     }

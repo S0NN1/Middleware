@@ -1,13 +1,13 @@
 package it.polimi.middlewaretechfordistsys.model;
 
-import scala.Int;
-
 public class Country {
-    public Double movingAverage;
+    public Double movingAverageValue;
     public Integer countryRank;
+    public Double movingAverageIncrease;
 
-    public Country(Integer countryRank, Double movingAverage){
+    public Country(Integer countryRank, Double movingAverageValue, Double movingAverageIncrease){
         this.countryRank = countryRank;
-        this.movingAverage = movingAverage;
+        this.movingAverageValue = movingAverageValue;
+        this.movingAverageIncrease = movingAverageIncrease;
     }
 }

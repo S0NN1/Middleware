@@ -2,7 +2,9 @@ package it.polimi.middlewaretechfordistsys;
 
 import java.util.*;
 
+import it.polimi.middlewaretechfordistsys.model.Country;
 import it.polimi.middlewaretechfordistsys.model.Top10Countries;
+import org.apache.hadoop.util.hash.Hash;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.RelationalGroupedDataset;
 import org.apache.spark.sql.Row;
@@ -12,6 +14,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 import it.polimi.middlewaretechfordistsys.utils.LogUtils;
+import scala.Int;
 
 import static org.apache.spark.sql.functions.*;
 
@@ -34,12 +37,11 @@ public class Covid19CaseCount {
 
         final String master = args.length > 0 ? args[0] : "local[4]";
         final String filePath = args.length > 1 ? args[1] : "./";
-        final String appName = useCache ? "BankWithCache" : "BankNoCache";
 
         final SparkSession spark = SparkSession
                 .builder()
                 .master(master)
-                .appName("Bank")
+                .appName("Covid19")
                 .getOrCreate();
 
 
@@ -61,8 +63,9 @@ public class Covid19CaseCount {
 
 
 
-        int maxDay = covidData.select(max("day")).first().getInt(0);
-        int maxCountries = covidData.select(max("rank")).first().getInt(0);
+        final int maxDay = covidData.select(max("day")).first().getInt(0);
+        final int maxCountries = covidData.select(max("rank")).first().getInt(0);
+        final int sevenDays = 7;
 
 
         System.out.println(maxDay);
@@ -70,6 +73,7 @@ public class Covid19CaseCount {
 
         //Query1 & Query 2 & Query 3
         HashMap<Integer, Top10Countries> highscore = new HashMap<>();
+        HashMap<Integer, HashMap<Integer, Country>> query1and2Result;
 
         for (int i=0; i<maxDay; i++)
         {
@@ -78,15 +82,15 @@ public class Covid19CaseCount {
 
         for (int rankId = 0; rankId<maxCountries; rankId++) {
             System.out.println("Country:" + rankId);
-            int[] newReportedCases = new int[7];
+            int[] newReportedCases = new int[sevenDays];
 
             Dataset<Row> rank= covidData.where("rank="+rankId);
 
             Double previousMa = 0d;
 
-            for (int i = 0; i < 7; i++) {
+            for (int i = 0; i < sevenDays; i++) {
                 newReportedCases[i] = rank.where("day=" + i).select("infectedIncrement").first().getInt(0);
-                System.out.println(newReportedCases[i]);
+                //System.out.println(newReportedCases[i]);
 
                 int[] newReportedCases2 = new int[i+1];
                 System.arraycopy(newReportedCases, 0, newReportedCases2, 0, i + 1);
@@ -94,35 +98,42 @@ public class Covid19CaseCount {
                 Double movingAverage = Arrays.stream(newReportedCases2).average().getAsDouble();
                 System.out.println("rank: " + rankId + " day: " + i + " ma:" + movingAverage);
 
-                Top10Countries top10Countries = highscore.get(i);
-                if (top10Countries != null) {
-                    top10Countries.Update(rankId, movingAverage);
-                }
 
                 Double maPercentageIncrease = (movingAverage / previousMa) * 100;
+
+                Top10Countries top10Countries = highscore.get(i);
+                if (top10Countries != null) {
+                    top10Countries.Update(rankId, movingAverage, maPercentageIncrease);
+                }
+
                 System.out.println("rank: " + rankId + " day: " + i + " perc_ma_inc:" + maPercentageIncrease + "%");
                 previousMa = movingAverage;
             }
 
-            for (int k = 7; k<maxDay; k++){
+            for (int k = sevenDays; k<maxDay; k++){
 
-                System.arraycopy(newReportedCases, 1, newReportedCases, 0, 7-1);
+                System.arraycopy(newReportedCases, 1, newReportedCases, 0, sevenDays-1);
 
-                newReportedCases[7-1] =  rank.where("day=" + k).select("infectedIncrement").first().getInt(0);
+                newReportedCases[sevenDays-1] =  rank.where("day=" + k).select("infectedIncrement").first().getInt(0);
 
                 Double movingAverage = Arrays.stream(newReportedCases).average().getAsDouble();
                 System.out.println("rank: " + rankId + "day: " + k + " ma:" + movingAverage);
 
-                highscore.get(k).Update(rankId, movingAverage);
-
                 Double maPercentageIncrease = (movingAverage / previousMa) * 100;
+
+                Top10Countries top10Countries = highscore.get(k);
+                if (top10Countries != null) {
+                    top10Countries.Update(rankId, movingAverage, maPercentageIncrease);
+                }
+
                 System.out.println("rank: " + rankId + "day: " + k + " perc_ma_inc:" + maPercentageIncrease + "%");
                 previousMa = movingAverage;
             }
         }
 
-        //Print Query 3
 
+
+        //Print Query 3
         for (int i=0; i<maxDay; i++)
         {
             System.out.println("Day " + i);
@@ -131,13 +142,6 @@ public class Covid19CaseCount {
         }
 
 
-/*
-        RelationalGroupedDataset groupBy = covidData.groupBy("rank", "day");
-
-        Dataset<Row> sum = groupBy.sum("infected");
-        sum.show();
-        
- */
 
         spark.close();
 
