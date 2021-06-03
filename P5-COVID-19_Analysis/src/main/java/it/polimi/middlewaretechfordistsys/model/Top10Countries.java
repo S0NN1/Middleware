@@ -7,20 +7,20 @@ public class Top10Countries {
     //Fields
     @SuppressWarnings("unused")
     public final Integer day;
-    final ArrayList<Country> countryList = new ArrayList<>();
+    private final ArrayList<Country> countryList = new ArrayList<>();
 
     //Constructor
-    public Top10Countries(int day){
+    public Top10Countries(int day) {
         this.day = day;
     }
 
     //Constants
-    final int tenCountries = 10;
+    private static final int tenCountries = 10;
 
     //Update method
-    public void Update(Country country) {
+    public final void Update(Country country) {
         Integer whereToInsert = FindWhereToInsert(country.movingAverageIncrease);
-        if (countryList.size()<tenCountries){
+        if (countryList.size()< tenCountries){
 
             if (whereToInsert == null) {
                 countryList.add(country);
@@ -40,7 +40,7 @@ public class Top10Countries {
             return;
         }
 
-        for (int i=countryList.size() -1; i>whereToInsert; i--)
+        for (int i = countryList.size() -1; i>whereToInsert; i--)
         {
             countryList.set(i, countryList.get(i-1));
         }
@@ -84,10 +84,10 @@ public class Top10Countries {
 
         return null;
     }
-    
-    public void print() {
-        for (int i=0; i<this.countryList.size(); i++){
-            Country country = this.countryList.get(i);
+
+    public final void print() {
+        for (int i = 0; i< countryList.size(); i++){
+            Country country = countryList.get(i);
             String p = Integer.toString((i+1));
 
             String cr = Integer.toString(country.countryRank);
@@ -96,5 +96,14 @@ public class Top10Countries {
                     " | CountryRank: "+it.polimi.middlewaretechfordistsys.utils.LogUtils.padLeftZeros(cr,2)+
                     " | MovingAverageIncrease: " + country.movingAverageIncrease);
         }
+    }
+
+    @Override
+    public final String toString() {
+        return "Top10Countries{" +
+                "day=" + day +
+                ", countryList=" + countryList +
+                ", tenCountries=" + tenCountries +
+                '}';
     }
 }
