@@ -1039,12 +1039,9 @@ int main(int argc, char** argv) {
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 
-	// Clean up
-	if (my_rank == 0) {
-		free2(start);
-		free2(buffer3);
-	}
 
+	free2(start);
+	free2(buffer3);
 	free2(buffer);
 	free3(howManySubNationsPerProcess);
 
@@ -1057,6 +1054,7 @@ int main(int argc, char** argv) {
 			free3(b[j].a);
 		}
 	}
+	free3(hashHistoryVar);
 
 	free3(people);
 	free4(nationItem);
