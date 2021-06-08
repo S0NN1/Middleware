@@ -74,7 +74,10 @@ void free2(void* p) {
 }
 
 void free3(struct arrayWithSize a) {
-	free2(a.pList);
+	if (a != NULL)
+	{
+		free2(a.pList);
+	}
 }
 
 void free4(struct nation n) {
@@ -575,12 +578,6 @@ struct arrayWithSize getPeopleNear(int rectIndex, struct subnation subnationItem
 		}
 	}
 
-	if (r.currentSize == 0)
-	{
-		int a = 0;
-		a++;
-	}
-
 	return r;
 }
 
@@ -729,8 +726,14 @@ struct individualSummaryWithRank*
 								}
 							}
 						}
+
+						free3(peopleNear);
 					}
+
+			
 				}
+
+				free3(r);
 			}
 		}
 	}
@@ -805,6 +808,8 @@ struct individualSummaryWithRank* calculateVirus1(
 
 		}
 	}
+
+	free3(subnazioneArrayList);
 
 	return buffer;
 }
