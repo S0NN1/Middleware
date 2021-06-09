@@ -74,10 +74,7 @@ void free2(void* p) {
 }
 
 void free3(struct arrayWithSize a) {
-	if (a != NULL)
-	{
-		free2(a.pList);
-	}
+	free2(a.pList);
 }
 
 void free4(struct nation n) {
