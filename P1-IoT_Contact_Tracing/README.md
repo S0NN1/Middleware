@@ -3,6 +3,7 @@
 <img src=".github/images/logo.png" width=192px height=192 px align="right" >
 
 ![latest release](https://img.shields.io/github/v/release/ArmelliniFederico/Middleware?color=green)
+![docs](https://img.shields.io/badge/docs-doxygen-brightgreen)
 
 A simple integration between Apache Kafka and Contiki-NG.
 
