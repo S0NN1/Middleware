@@ -66,20 +66,6 @@ struct arrayWithSizeAndIndividual {
 	struct individual* i;
 };
 
-void free2(void* p) {
-	if (p != NULL)
-	{
-		free(p);
-	}
-}
-
-void free3(struct arrayWithSize a) {
-	free2(a.pList);
-}
-
-void free4(struct nation n) {
-	free3(n.list);
-}
 
 //method that calculate how many subnations the world must be splitted into: the area must be feasible to have a perfect split
 int calculateNumSubnations(int W, int L, int w, int l)
@@ -224,7 +210,7 @@ struct arrayWithSize insertIndividual(struct arrayWithSize arrayWithSize, struct
 		}
 
 		if (arrayWithSize.pList != NULL)
-			free2(arrayWithSize.pList);
+			free(arrayWithSize.pList);
 
 		arrayWithSize.pList = r2;
 		arrayWithSize.maxSize = newSize;
@@ -256,7 +242,7 @@ struct arrayWithSize insertInt(struct arrayWithSize arrayWithSize, int value) {
 		}
 
 		if (arrayWithSize.pList != NULL)
-			free2(arrayWithSize.pList);
+			free(arrayWithSize.pList);
 
 		arrayWithSize.pList = r2;
 		arrayWithSize.maxSize = newSize;
@@ -297,7 +283,7 @@ struct arrayWithSize insertHashIndividual(
 		}
 
 		if (a.pList != NULL)
-			free2(a.pList);
+			free(a.pList);
 
 		a.pList = r2;
 		a.maxSize = newSize;
@@ -328,7 +314,7 @@ struct arrayWithSizeAndIndividual* insertContactHistory(struct arrayWithSizeAndI
 		}
 
 		if (arrayWithSize->a.pList != NULL)
-			free2(arrayWithSize->a.pList);
+			free(arrayWithSize->a.pList);
 
 		arrayWithSize->a.pList = r2;
 		arrayWithSize->a.maxSize = newSize;
@@ -360,7 +346,7 @@ struct arrayWithSize insertSubnation(struct arrayWithSize arrayWithSize, struct 
 		}
 
 		if (arrayWithSize.pList != NULL)
-			free2(arrayWithSize.pList);
+			free(arrayWithSize.pList);
 
 		arrayWithSize.pList = r2;
 		arrayWithSize.maxSize = newSize;
@@ -724,13 +710,13 @@ struct individualSummaryWithRank*
 							}
 						}
 
-						free3(peopleNear);
+						free(peopleNear.pList);
 					}
 
 			
 				}
 
-				free3(r);
+				free(r.pList);
 			}
 		}
 	}
@@ -806,7 +792,7 @@ struct individualSummaryWithRank* calculateVirus1(
 		}
 	}
 
-	free3(subnazioneArrayList);
+	free(subnazioneArrayList.pList);
 
 	return buffer;
 }
@@ -1042,10 +1028,10 @@ int main(int argc, char** argv) {
 	}
 
 
-	free2(start);
-	free2(buffer3);
-	free2(buffer);
-	free3(howManySubNationsPerProcess);
+	free(start);
+	free(buffer3);
+	free(buffer);
+	free(howManySubNationsPerProcess.pList);
 
 	struct arrayWithSize* a = hashHistoryVar.pList;
 	for (int i = 0; i < dimHash; i++)
@@ -1053,13 +1039,13 @@ int main(int argc, char** argv) {
 		struct arrayWithSizeAndIndividual* b = a[i].pList;
 		for (int j = 0; j < a[i].currentSize; j++)
 		{
-			free3(b[j].a);
+			free(b[j].a.pList);
 		}
 	}
-	free3(hashHistoryVar);
+	free(hashHistoryVar.pList);
 
-	free3(people);
-	free4(nationItem);
+	free(people.pList);
+	free(nationItem.list.pList);
 
 	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Finalize();
