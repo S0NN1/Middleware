@@ -20,7 +20,7 @@ Full specification can be found [**here**](../specs/specification.pdf) under Pro
 
 ## Architecture
 
-![lel](.github/images/UML.png)
+![lel](.github/images/p4-arch.png)
 
 
 
