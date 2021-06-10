@@ -40,13 +40,18 @@ You can find detailed documentation at:
 ## Installation
 
 ### OpenMpi
+
+#### Windows
+[Install WSL](https://docs.microsoft.com/it-it/windows/wsl/install-win10) and follow Linux section.
+
+#### Linux
 Update apt packages by running:
 
 ```sudo apt-get update -y```.
 
 Install openMPI by running:
 
- `sudo apt-get install -y openmpi-bin`.
+ `sudo apt-get install -y openmpi-bin libopenmpi-dev openmpi-common`.
 
 Test the installation by running:
 
