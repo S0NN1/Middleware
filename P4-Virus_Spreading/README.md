@@ -31,7 +31,7 @@ Full specification can be found [**here**](../specs/specification.pdf) under Pro
 ## Documentation
 
 You can find detailed documentation at:
-- [**Akka Node-Red backend**](https://pirox4256.github.io/node-red-javadocs/)
+- [**Virus Spreading Documentation**](https://github.com/ArmelliniFederico/Middleware/blob/main/P4-Virus_Spreading/docs/doc4.pdf)
 
 ## Requirements
 
