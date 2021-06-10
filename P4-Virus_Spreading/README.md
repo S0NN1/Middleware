@@ -78,3 +78,10 @@ If you want to run the program in cluster mode, you have to configure your hostf
 Once configured, you can run:
 
 `mpiexec --hostfile <path/to/hostfile> -np <number-of-processes-to-launch> -n WorldSize executable_path numInfectedTotal numPeopleTotal dimWorldX dimWorldY days dimSubNationX dimSubNationY timestep distance velocity`
+
+### Sample parameters (after executable_path)
+
+* `10 1000 1000 1000 25 50 50 14400 20 10`
+* `10 1000 1000 1000 10 50 50 14400 1 10`
+* `20 100 100 100 100 5 5 1 1 1`
+* `30 1500 1500 1500 25 50 50 14400 15 10`
