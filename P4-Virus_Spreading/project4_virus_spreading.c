@@ -27,8 +27,8 @@ struct individual {
 	int rank;
 	struct point position;
 	int isInfected;
-	int lastTimeHeWasInfected;
-	int lastTimeHeRecovered;
+	long lastTimeHeWasInfected;
+	long lastTimeHeRecovered;
 	long id;
 	long subnation;
 };
@@ -570,17 +570,17 @@ struct arrayWithSize getPeopleNear(long rectIndex, struct subnation subnationIte
 	return r;
 }
 
-void putHash(struct arrayWithSize storicoContatti, struct individual* p) {
+void putHash(struct arrayWithSize contactHistory, struct individual* p) {
 	long i = (p->id) % dimHash;
-	struct arrayWithSize* t1 = storicoContatti.pList;
+	struct arrayWithSize* t1 = contactHistory.pList;
 	struct arrayWithSize t2 = t1[i];
 	t2 = insertHashIndividual(t2, p);
 	t1[i] = t2;
 }
 
-struct arrayWithSizeAndIndividual* getHash(struct arrayWithSize storicoContatti, struct individual* p) {
+struct arrayWithSizeAndIndividual* getHash(struct arrayWithSize contactHistory, struct individual* p) {
 	long i = (p->id) % dimHash;
-	struct arrayWithSize* t1 = storicoContatti.pList;
+	struct arrayWithSize* t1 = contactHistory.pList;
 	struct arrayWithSize t2 = t1[i];
 	struct arrayWithSizeAndIndividual* t3 = t2.pList;
 	for (long j = 0; j < t2.currentSize; j++)
@@ -596,8 +596,8 @@ struct arrayWithSizeAndIndividual* getHash(struct arrayWithSize storicoContatti,
 }
 
 //method that finds the contact history of an individual
-struct contactHistory* FindContactHistory(struct individual* p, struct individual* p2, struct arrayWithSize storicoContatti) {
-	struct arrayWithSizeAndIndividual* t1 = getHash(storicoContatti, p);
+struct contactHistory* FindContactHistory(struct individual* p, struct individual* p2, struct arrayWithSize contactHistory) {
+	struct arrayWithSizeAndIndividual* t1 = getHash(contactHistory, p);
 
 	if (t1 == NULL)
 	{
@@ -622,34 +622,37 @@ struct contactHistory* FindContactHistory(struct individual* p, struct individua
 struct individualSummaryWithRank*
 	calculateVirus2(
 		struct individualSummaryWithRank* buffer,
-		struct subnation subNazioneItem, int rank,
+		struct subnation subNationItem, int rank,
 		long t, double distanceToBeInfected, struct arrayWithSize people,
-		struct arrayWithSize storicoContatti,
-		long w, long l, long i_t2, long subnazioneIndex, long velocity)
+		struct arrayWithSize contactHistory,
+		long w, long l, long i_t2, long subnationIndex, long velocity, long day)
 {
 	struct individual** plist = people.pList;
 
-	if (buffer[subnazioneIndex].individualSummary.infected > 0) { //only if the subnation has infected people we need to calculate the evolution, otherwise it's useless
+	long day_in_seconds =  (day * 60 * 60 * 24);
+
+	if (buffer[subnationIndex].individualSummary.infected > 0) { //only if the subnation has infected people we need to calculate the evolution, otherwise it's useless
 
 		//for each person in the subnation
 		for (long ip = 0; ip < people.currentSize; ip++)
 		{
-			if (plist[ip]->subnation != subnazioneIndex)
+			if (plist[ip]->subnation != subnationIndex)
 				continue;
 
-			if (t * i_t2 >= plist[ip]->lastTimeHeWasInfected + minTimeToHeal && plist[ip]->isInfected == 1) { //if he/her is infected and it's time become healthier again
+			//if he/her is infected and it's time become healthier again
+			if ((plist[ip]->lastTimeHeWasInfected < 0 && plist[ip]->isInfected == 1) || ((t * i_t2 + day_in_seconds) >= plist[ip]->lastTimeHeWasInfected + minTimeToHeal && plist[ip]->isInfected == 1)) { 
 				plist[ip]->isInfected = 0;
-				buffer[subnazioneIndex].individualSummary.infected--;
-				buffer[subnazioneIndex].individualSummary.sane++;
-				plist[ip]->lastTimeHeRecovered = t * i_t2;
+				buffer[subnationIndex].individualSummary.infected--;
+				buffer[subnationIndex].individualSummary.sane++;
+				plist[ip]->lastTimeHeRecovered = (t * i_t2) + day_in_seconds;
 			}
 
-			if (buffer[subnazioneIndex].individualSummary.infected > 0) { //only if the subnation has infected people we need to calculate the evolution, otherwise it's useless
-				struct arrayWithSize r = findRectangle(subNazioneItem, plist[ip], distanceToBeInfected, rank, w, l); //rectangles near him/her
+			if (buffer[subnationIndex].individualSummary.infected > 0) { //only if the subnation has infected people we need to calculate the evolution, otherwise it's useless
+				struct arrayWithSize r = findRectangle(subNationItem, plist[ip], distanceToBeInfected, rank, w, l); //rectangles near him/her
 				long* r2 = r.pList;
 				if (r.currentSize > 0) {
 					for (long i = 0, rSize = r.currentSize; i < rSize; i++) { //for each rectangle/cell near him/her
-						struct arrayWithSize peopleNear = getPeopleNear(r2[i], subNazioneItem, w, l); //Get people in that rectangle
+						struct arrayWithSize peopleNear = getPeopleNear(r2[i], subNationItem, w, l); //Get people in that rectangle
 						struct individual** plist2 = peopleNear.pList;
 
 						for (long ip2 = 0; ip2 < peopleNear.currentSize; ip2++) { //for each people in that rectangle
@@ -659,7 +662,7 @@ struct individualSummaryWithRank*
 
 							if ((pc1->id != pc2->id && pc1->rank == pc2->rank) && pc2->isInfected) //if the person we have been near is infected
 							{
-								struct contactHistory* vicinanzaItem = FindContactHistory(pc1, pc2, storicoContatti);
+								struct contactHistory* vicinanzaItem = FindContactHistory(pc1, pc2, contactHistory);
 								if (vicinanzaItem == NULL || vicinanzaItem->to == NULL && vicinanzaItem->from == NULL) {
 
 									//first time we encounter this person
@@ -670,7 +673,7 @@ struct individualSummaryWithRank*
 									v->timeStart = t * i_t2;
 									v->to = pc2;
 
-									struct arrayWithSizeAndIndividual* v2 = getHash(storicoContatti, pc1);
+									struct arrayWithSizeAndIndividual* v2 = getHash(contactHistory, pc1);
 
 									//insert contact history with this person
 									if (v2 != NULL) {
@@ -678,22 +681,22 @@ struct individualSummaryWithRank*
 										v2 = insertContactHistory(v2, v);
 									}
 									else {
-										putHash(storicoContatti, pc1);
+										putHash(contactHistory, pc1);
 
 
-										v2 = getHash(storicoContatti, pc1);
+										v2 = getHash(contactHistory, pc1);
 
 										v2 = insertContactHistory(v2, v);
 									}
 
 									//if we stayed near him/her too much, we become infected
 									if (v->timeEnd - v->timeStart >= minTimeToGetInfected
-										&& !pc1->isInfected && (pc1->lastTimeHeRecovered < 0 || pc1->lastTimeHeRecovered + TimeToBecomeSuspceptibleAgain >= (t * i_t2)))
+										&& !pc1->isInfected && (pc1->lastTimeHeRecovered < 0 || pc1->lastTimeHeRecovered + TimeToBecomeSuspceptibleAgain >= (t * i_t2 + day_in_seconds)))
 									{
 										pc1->isInfected = 1;
-										buffer[subnazioneIndex].individualSummary.sane--;
-										buffer[subnazioneIndex].individualSummary.infected++;
-										pc1->lastTimeHeWasInfected = t * i_t2;
+										buffer[subnationIndex].individualSummary.sane--;
+										buffer[subnationIndex].individualSummary.infected++;
+										pc1->lastTimeHeWasInfected = t * i_t2 + day_in_seconds;
 									}
 								}
 								else {
@@ -704,11 +707,11 @@ struct individualSummaryWithRank*
 
 									//if we stayed near him/her too much, we become infected
 									if (vicinanzaItem->timeEnd - vicinanzaItem->timeStart >= minTimeToGetInfected
-										&& !pc1->isInfected && (pc1->lastTimeHeRecovered < 0 || pc1->lastTimeHeRecovered + TimeToBecomeSuspceptibleAgain >= (t * i_t2))) {
+										&& !pc1->isInfected && (pc1->lastTimeHeRecovered < 0 || pc1->lastTimeHeRecovered + TimeToBecomeSuspceptibleAgain >= (t * i_t2 + day_in_seconds))) {
 										pc1->isInfected = 1;
-										buffer[subnazioneIndex].individualSummary.sane--;
-										buffer[subnazioneIndex].individualSummary.infected++;
-										pc1->lastTimeHeWasInfected = t * i_t2;
+										buffer[subnationIndex].individualSummary.sane--;
+										buffer[subnationIndex].individualSummary.infected++;
+										pc1->lastTimeHeWasInfected = t * i_t2 + day_in_seconds;
 									}
 								}
 							}
@@ -770,8 +773,8 @@ struct individualSummaryWithRank* calculateVirus1(
 	struct nation nationItem,
 	int rank, long t, double distanceToBeInfected,
 	struct arrayWithSize people,
-	struct arrayWithSize storicoContatti,
-	long w, long l, long velocity)
+	struct arrayWithSize contactHistory,
+	long w, long l, long velocity, long day)
 {
 
 	printf("\n");
@@ -790,7 +793,7 @@ struct individualSummaryWithRank* calculateVirus1(
 		for (long i = 0; i < t2; i++) {
 			buffer = calculateVirus2(buffer, sb2,
 				rank, t, distanceToBeInfected, people,
-				storicoContatti, w, l, i, sbi, velocity);
+				contactHistory, w, l, i, sbi, velocity, day);
 
 
 		}
@@ -1009,7 +1012,7 @@ int main(int argc, char** argv) {
 		if (i >= 0) //we use this to print info "at the day of the day 0", so at the start of the run
 		{
 			buffer = calculateVirus1(buffer, nationItem,
-				my_rank, timeStep, distanceToBeInfected, people, hashHistoryVar, dimSubNation.x, dimSubNation.y, velocity);
+				my_rank, timeStep, distanceToBeInfected, people, hashHistoryVar, dimSubNation.x, dimSubNation.y, velocity, i);
 		}
 
 		MPI_Gather(buffer, maxSubnationPerProcess * scale, MPI_INT,
