@@ -4,8 +4,8 @@
 | Name and Surname | Personal Code  | Email |
 :---: | :---: | :---:
 | Federico Armellini | 10520866 | federico.armellini@mail.polimi.it |
-| Luca Pirovano | xxxxxxxx | luca7.pirovano@mail.polimi.it |
-| Nicolò Sonnino | xxxxxxxx | nicolo.sonnino@mail.polimi.it |
+| Luca Pirovano | 10569272 | luca7.pirovano@mail.polimi.it |
+| Nicolò Sonnino | 10569180 | nicolo.sonnino@mail.polimi.it |
 
 ## Projects
 | Number | Name | Technologies used |Readme | Documentation |
