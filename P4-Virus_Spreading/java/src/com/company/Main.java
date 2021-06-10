@@ -50,7 +50,7 @@ public class Main {
 
     static Nullable<Integer> calculateNumSubnations(int W, int L, int w, int l)
     {
-        float f = (float)W*L;
+        double f = (double)W*L;
         f /= (w*l);
 
         int i = W*L;

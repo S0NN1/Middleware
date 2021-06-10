@@ -71,7 +71,7 @@ struct arrayWithSizeAndIndividual {
 //method that calculate how many subnations the world must be splitted into: the area must be feasible to have a perfect split
 long calculateNumSubnations(long W, long L, long w, long l)
 {
-	float f = (float)W * L;
+	double f = (double)W * L;
 	f /= (w * l);
 
 	long i = W * L;
