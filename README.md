@@ -1,11 +1,11 @@
 # Middleware Projects - Polimi 2020/2021
 
 ## Team members
-| Name and Surname | Personal Code  | Email |
-:---: | :---: | :---:
-| Federico Armellini | 10520866 | federico.armellini@mail.polimi.it |
-| Luca Pirovano | 10569272 | luca7.pirovano@mail.polimi.it |
-| Nicolò Sonnino | 10569180 | nicolo.sonnino@mail.polimi.it |
+| Name and Surname | Personal Code  | Email | Github Username |
+:---: | :---: | :---: | :---:
+| Federico Armellini | 10520866 | federico.armellini@mail.polimi.it | [@ArmeF97](https://github.com/ArmeF97), [@ArmelliniFederico](https://github.com/ArmelliniFederico) |
+| Luca Pirovano | 10569272 | luca7.pirovano@mail.polimi.it | [@PiroX4256](https://github.com/PiroX4256) |
+| Nicolò Sonnino | 10569180 | nicolo.sonnino@mail.polimi.it | [@S0NN1](https://github.com/S0NN1) |
 
 ## Projects
 | Number | Name | Ref. professor |Technologies used |Readme | Documentation |
