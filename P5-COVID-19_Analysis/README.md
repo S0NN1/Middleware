@@ -75,4 +75,4 @@ Once configured, you can run:
 
 ```sudo ./spark-submit --class it.polimi.middlewaretechfordistsys.Covid19CaseCount --master spark://<master-ip>:<port> --deploy-mode cluster --supervise --executor-memory <total-memory> --total-executor-cores <total-cores> <path-to-the-jar> local[*] <directory-of-data.csv>```
 
-You will see the worker running from the Spark master web interface, reachable at http://<master-ip>:8080
+You will see the worker running from the Spark master web interface, reachable at http://\<master-ip>:8080
