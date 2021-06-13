@@ -17,7 +17,7 @@ It is realized with the Message Passing Interface technology, written in C langu
 
 ## Specification
 
-Full specification can be found [**here**](../specs/specification.pdf) under Project 3 section.
+Full specification can be found [**here**](../specs/specification.pdf) under Project 4 section.
 
 ## Architecture
 
