@@ -3,7 +3,7 @@
 <img src="https://freepikpsd.com/media/2019/10/apache-spark-logo-png-8-Transparent-Images.png" width=250px height=170 px align="right" >
 
 ![latest release](https://img.shields.io/github/v/release/ArmelliniFederico/Middleware?color=green)
-![docs](https://img.shields.io/badge/docs-doxygen-brightgreen)
+![docs](https://img.shields.io/badge/docs-javadocs-brightgreen)
 
 A simple Spark application in order to understand the COVID-19 weekly trends.
 
@@ -32,7 +32,7 @@ Full specification can be found [**here**](../specs/specification.pdf) under Pro
 ## Documentation
 
 You can find detailed documentation at:
-- [**Spark COVID Analysis**]()
+- [**Spark COVID Analysis**](https://pirox4256.github.io/middleware-spark-javadocs/)
 
 ## Requirements
 
