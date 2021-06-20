@@ -1,3 +1,10 @@
+/*******************************************************************************************************************//**
+ *  \file project4_virus_spreading.c
+ *  \brief 
+ * File containing program that simulates a virus spreading into a given population.
+ *  \author Federico Armellini
+ *  \version 1.0
+ **********************************************************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -67,8 +74,15 @@ struct arrayWithSizeAndIndividual {
 	struct individual* i;
 };
 
-
-//method that calculate how many subnations the world must be splitted into: the area must be feasible to have a perfect split
+/*******************************************************************************************************************//**
+ * \brief Function that calculates how many subnations the world must be split into: the area must be feasible to have a perfect split.
+ *
+ * @param W width of the rectangular area where individuals move.
+ * @param L length of the rectangular area where individuals move.
+ * @param w width of each country.
+ * @param l length of each country.
+ * @return long number of subnations.
+ **********************************************************************************************************************/
 long calculateNumSubnations(long W, long L, long w, long l)
 {
 	double f = (double)W * L;
@@ -87,13 +101,25 @@ long calculateNumSubnations(long W, long L, long w, long l)
 	return -1;
 }
 
+/*******************************************************************************************************************//**
+ * \brief Function that calculates a random number.
+ *
+ * @param lower the lower bound.
+ * @param upper the upper bound.
+ * @return long random number.
+ **********************************************************************************************************************/
 long getRandomNumber(long lower, long upper) {
 	long num = (rand() % (upper - lower + 1)) + lower;
 	return num;
 }
 
-
-//method that assign, for each mpi process, a number of subnations each process will handle
+/*******************************************************************************************************************//**
+ * \brief Function that assigns a number of subnations for each MPI process.
+ *
+ * @param numProcess number of processes.
+ * @param numSubnations number of subnations.
+ * @return arrayWithSize distributions per process.
+ **********************************************************************************************************************/
 struct arrayWithSize calculateDistributionSubnationsToProcess(long numProcess, long numSubnations) {
 
 	long* r = malloc(sizeof(long) * numProcess);
@@ -125,6 +151,12 @@ struct arrayWithSize calculateDistributionSubnationsToProcess(long numProcess, l
 	return arrayWithSizeVar;
 }
 
+/*******************************************************************************************************************//**
+ * \brief Function that calculates max number in an array.
+ *
+ * @param arrayWithSize struct containing plist, maxSize and currentSize.
+ * @return long max number.
+ **********************************************************************************************************************/
 long getMax(struct arrayWithSize a) {
 	long max = -1;
 	long* p2 = a.pList;
@@ -139,7 +171,13 @@ long getMax(struct arrayWithSize a) {
 	return max;
 }
 
-//method that populates a subnation with people, calcutaing how many infected, sane people each nation will get
+/*******************************************************************************************************************//**
+ * \brief Function that populates a subnation with people: it calcutes number of infected and sane civilians based on previous infected ones.
+ *
+ * @param numPeople number of people in a subnation.
+ * @param numInfected number of infected in a subnation.
+ * @return individualSummaryWithRank* people information struct.
+ **********************************************************************************************************************/
 struct individualSummaryWithRank* fillPeopleInformation(long numPeople, long numInfected,
 	long numProcess, struct arrayWithSize maxRectanglesForEachProcess, long maxSubnationPerProcess) {
 	long sani = numPeople - numInfected;
@@ -186,8 +224,13 @@ struct individualSummaryWithRank* fillPeopleInformation(long numPeople, long num
 	return returnValue;
 }
 
-
-//method that inserts and individual to a list
+/*******************************************************************************************************************//**
+ * \brief Function that inserts an individual into a list.
+ *
+ * @param arrayWithSize struct containing plist, maxSize and currentSize.
+ * @param individual struct containing: rank, position, isInfected, lastTimeHeWasInfected, lastTimeHeRecovered, id and subnation.
+ * @return arrayWithSize provided array.
+ **********************************************************************************************************************/
 struct arrayWithSize insertIndividual(struct arrayWithSize arrayWithSize, struct individual* individual) {
 	while (1)
 	{
@@ -218,8 +261,13 @@ struct arrayWithSize insertIndividual(struct arrayWithSize arrayWithSize, struct
 	}
 }
 
-
-//method that inserts a long to a list
+/*******************************************************************************************************************//**
+ * \brief Function that inserts a long into a list.
+ *
+ * @param arrayWithSize struct containing plist, maxSize and currentSize.
+ * @param value long value.
+ * @return arrayWithSize provided array.
+ **********************************************************************************************************************/
 struct arrayWithSize insertLong(struct arrayWithSize arrayWithSize, long value) {
 	while (1)
 	{
@@ -250,8 +298,13 @@ struct arrayWithSize insertLong(struct arrayWithSize arrayWithSize, long value) 
 	}
 }
 
-
-//method that inserts an individual in a list 
+/*******************************************************************************************************************//**
+ * \brief Function that inserts an individual into a list.
+ *
+ * @param arrayWithSize struct containing plist, maxSize and currentSize.
+ * @param p struct containing: rank, position, isInfected, lastTimeHeWasInfected, lastTimeHeRecovered, id and subnation.
+ * @return arrayWithSize provided array.
+ **********************************************************************************************************************/
 struct arrayWithSize insertHashIndividual(
 	struct arrayWithSize a,
 	struct individual* p)
@@ -291,7 +344,13 @@ struct arrayWithSize insertHashIndividual(
 	}
 }
 
-//method that inserts a contacthistory in a list
+/*******************************************************************************************************************//**
+ * \brief Function that inserts a history of a contact into a list.
+ *
+ * @param arrayWithSize struct containing arrayWithSize and individual.
+ * @param vic struct containing a contact history.
+ * @return arrayWithSizeAndIndividual provided array.
+ **********************************************************************************************************************/
 struct arrayWithSizeAndIndividual* insertContactHistory(struct arrayWithSizeAndIndividual* arrayWithSize, struct contactHistory* vic) {
 	while (1)
 	{
@@ -322,8 +381,13 @@ struct arrayWithSizeAndIndividual* insertContactHistory(struct arrayWithSizeAndI
 	}
 }
 
-
-//method that inserts a subnation in a list
+/*******************************************************************************************************************//**
+ * \brief Function that inserts a subnation into a list.
+ *
+ * @param arrayWithSize struct containing plist, maxSize and currentSize.
+ * @param subantion struct containing a subnation.
+ * @return arrayWithSize provided array.
+ **********************************************************************************************************************/
 struct arrayWithSize insertSubnation(struct arrayWithSize arrayWithSize, struct subnation subnation) {
 	while (1)
 	{
@@ -354,8 +418,17 @@ struct arrayWithSize insertSubnation(struct arrayWithSize arrayWithSize, struct 
 	}
 }
 
-
-//method that generates the nation map of a mpi process. Each subnation has a position, a rank and a number of infected and sane individuals.
+/*******************************************************************************************************************//**
+ * \brief Function that generates the nation map of a mpi process. Each subnation has a position, a rank and a number of infected and sane individuals...
+ *
+ * @param rank rank of the Map.
+ * @param howManySubNationsPerProcess subnations per process.
+ * @param w width of the Map.
+ * @param l length of the Map.
+ * @param start starting point of a ranked portion of the Map containing sane and infected percentages.
+ * @param maxRectanglesPerProcess max rectangles per process.
+ * @return nation generated nation.
+ **********************************************************************************************************************/
 struct nation GenerateMap(
 	int rank,
 	struct arrayWithSize howManySubNationsPerProcess,
@@ -420,7 +493,12 @@ struct nation GenerateMap(
 }
 
 
-//method that gets all the people of a nation
+/*******************************************************************************************************************//**
+ * @brief Function that returns all civilians in a nation.
+ * 
+ * @param nationItem nation provided.
+ * @return arrayWithSize provided array.
+ **********************************************************************************************************************/
 struct arrayWithSize getPeople(struct nation nationItem) {
 	struct arrayWithSize people;
 	people.currentSize = 0;
@@ -441,7 +519,13 @@ struct arrayWithSize getPeople(struct nation nationItem) {
 }
 
 
-//method that prints infected/sane information to the console
+/*******************************************************************************************************************//**
+ * @brief Function that prints infected info.
+ * 
+ * @param i2 list with all information.
+ * @param maxRectanglesPerProcess max rectangles per process.
+ * @param i long for computations.
+ **********************************************************************************************************************/
 void printInfectedInformation(struct individualSummaryWithRank i2, long maxRectanglesPerProcess, long i) {
 	if (maxRectanglesPerProcess == 1)
 	{
@@ -456,7 +540,12 @@ void printInfectedInformation(struct individualSummaryWithRank i2, long maxRecta
 	}
 }
 
-//method that prints infected/sane information to the console
+/*******************************************************************************************************************//**
+ * @brief Function that prints the array.
+ * 
+ * @param buffer3 array to be printed.
+ * @param maxRectanglesPerProcess max rectangles per process.
+ **********************************************************************************************************************/
 void printArray(struct arrayWithSize buffer3, long maxRectanglesPerProcess) {
 	struct individualSummaryWithRank* p2 = buffer3.pList;
 	long totInfectedPartial = 0;
@@ -493,7 +582,13 @@ void printArray(struct arrayWithSize buffer3, long maxRectanglesPerProcess) {
 	fflush(stdout);
 }
 
-//method that gets all the subnation of a nation, given the rank
+/*******************************************************************************************************************//**
+ * @brief Function that gets all the subnation of a nation, given the rank.
+ * 
+ * @param nationItem nation provided.
+ * @param rank rank of the nation.
+ * @return struct arrayWithSize generated subnations.
+ */
 struct arrayWithSize GetSubnations(struct nation nationItem, int rank) {
 	struct arrayWithSize r;
 	r.currentSize = 0;
@@ -512,13 +607,30 @@ struct arrayWithSize GetSubnations(struct nation nationItem, int rank) {
 	return r;
 }
 
-//method that, given the coordinates, return the index of the rectangle in a grid (counting cells)
+/*******************************************************************************************************************//**
+ * @brief Function that, given the coordinates, returns the index of a rectangle in the grid (counting cells).
+ * 
+ * @param x x-axis coordinate.
+ * @param y y-axis coordinate.
+ * @param w width of the rectangle.
+ * @param l length of the rectangle.
+ * @return long rectangle index.
+ */
 long rectIndex(long x, long y, long w, long l) {
 	return (x * w) + y;
 }
 
-//method that returns all the cell indexes of the cell near a cell (in a given distance), in a subnation: 
-//it is used to determine near cells of an individual in order to understand if he/her is near infected people.
+/*******************************************************************************************************************//**
+ * @brief Function determines near cells of an individual in order to understand if he/her is near infected people.
+ * 
+ * @param subnationItem subnation.
+ * @param p individual.
+ * @param distanceToBeInfected maximum infection distance between individuals.
+ * @param rank subnation rank.
+ * @param w width.
+ * @param l length.
+ * @return struct arrayWithSize rectangle found.
+ */
 struct arrayWithSize findRectangle(struct subnation subnationItem,
 	struct individual* p, double distanceToBeInfected, int rank, long w, long l) {
 	struct arrayWithSize  r;
@@ -547,7 +659,15 @@ struct arrayWithSize findRectangle(struct subnation subnationItem,
 }
 
 
-//method that returns all the people inside a rectangle/cell, given its index
+/*******************************************************************************************************************//**
+ * @brief Function that returns all the people inside a rectangle/cell given its index.
+ * 
+ * @param rectIndex rectangle index.
+ * @param subnationItem subantion.
+ * @param w width.
+ * @param l length.
+ * @return struct arrayWithSize people near by. 
+ */
 struct arrayWithSize getPeopleNear(long rectIndex, struct subnation subnationItem, long w, long l) {
 	struct arrayWithSize r;
 	r.currentSize = 0;
@@ -570,6 +690,12 @@ struct arrayWithSize getPeopleNear(long rectIndex, struct subnation subnationIte
 	return r;
 }
 
+/*******************************************************************************************************************//**
+ * @brief Function that inserts an individual into the hash map.
+ * 
+ * @param contactHistory contact history.
+ * @param p individual.
+ */
 void putHash(struct arrayWithSize contactHistory, struct individual* p) {
 	long i = (p->id) % dimHash;
 	struct arrayWithSize* t1 = contactHistory.pList;
@@ -577,7 +703,13 @@ void putHash(struct arrayWithSize contactHistory, struct individual* p) {
 	t2 = insertHashIndividual(t2, p);
 	t1[i] = t2;
 }
-
+/*******************************************************************************************************************//**
+ * @brief Functions that returns hash object.
+ * 
+ * @param contactHistory contact history.
+ * @param p individual.
+ * @return struct arrayWithSizeAndIndividual* hash.
+ */
 struct arrayWithSizeAndIndividual* getHash(struct arrayWithSize contactHistory, struct individual* p) {
 	long i = (p->id) % dimHash;
 	struct arrayWithSize* t1 = contactHistory.pList;
@@ -595,7 +727,14 @@ struct arrayWithSizeAndIndividual* getHash(struct arrayWithSize contactHistory, 
 	return NULL;
 }
 
-//method that finds the contact history of an individual
+/*******************************************************************************************************************//**
+ * @brief Function that finds the contact history of an individual.
+ * 
+ * @param p first individual.
+ * @param p2 second individual.
+ * @param contactHistory contact history.
+ * @return struct contactHistory* contact history found.
+ */
 struct contactHistory* FindContactHistory(struct individual* p, struct individual* p2, struct arrayWithSize contactHistory) {
 	struct arrayWithSizeAndIndividual* t1 = getHash(contactHistory, p);
 
@@ -618,7 +757,24 @@ struct contactHistory* FindContactHistory(struct individual* p, struct individua
 }
 
 
-
+/*******************************************************************************************************************//**
+ * @brief Main function that calculates virus spreading in a day.
+ * 
+ * @param buffer input data.
+ * @param subNationItem subnation.
+ * @param rank rank of the subnation.
+ * @param t timestep.
+ * @param distanceToBeInfected maximum infection distance between individuals.
+ * @param people number of people.
+ * @param contactHistory contact history.
+ * @param w width.
+ * @param l length.
+ * @param i_t2 individual timestep.
+ * @param subnationIndex subnation index.
+ * @param velocity movement speed of each individual.
+ * @param day day.
+ * @return struct individualSummaryWithRank* population list.
+ */
 struct individualSummaryWithRank*
 	calculateVirus2(
 		struct individualSummaryWithRank* buffer,
@@ -768,6 +924,23 @@ struct individualSummaryWithRank*
 	return buffer;
 }
 
+/*******************************************************************************************************************//**
+ * @brief Main functions that simulates virus spreading.
+ * 
+ * @param buffer input data.
+ * @param nationItem nation.
+ * @param rank rank of the nation.
+ * @param t timestep.
+ * @param distanceToBeInfected maximum infection distance between individuals.
+ * @param people number of people.
+ * @param contactHistory contact history.
+ * @param w width.
+ * @param l length.
+ * @param subnationIndex subnation index.
+ * @param velocity movement speed of each individual.
+ * @param day day.
+ * @return struct individualSummaryWithRank* 
+ */
 struct individualSummaryWithRank* calculateVirus1(
 	struct individualSummaryWithRank* buffer,
 	struct nation nationItem,
@@ -804,6 +977,11 @@ struct individualSummaryWithRank* calculateVirus1(
 	return buffer;
 }
 
+/*******************************************************************************************************************//**
+ * @brief Function that prints array with size and content.
+ * 
+ * @param a array provided.
+ */
 void printArrayInt(struct arrayWithSize a) {
 	long* b = a.pList;
 	printf("Array, size %ld, content: ", a.currentSize);
@@ -813,6 +991,13 @@ void printArrayInt(struct arrayWithSize a) {
 	printf("\n");
 }
 
+/*******************************************************************************************************************//**
+ * @brief Main.
+ * 
+ * @param argc argv size.
+ * @param argv WorldSize executable_path numInfectedTotal numPeopleTotal dimWorldX dimWorldY days dimSubNationX dimSubNationY timestep distance velocity.
+ * @return int exit code.
+ */
 int main(int argc, char** argv) {
 	// Init random number generator
 	srand((unsigned int)time(NULL));
