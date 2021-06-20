@@ -32,7 +32,7 @@ Full specification can be found [**here**](../specs/specification.pdf) under Pro
 ## Documentation
 
 You can find detailed documentation at:
-- [**Virus Spreading Documentation**](https://github.com/ArmelliniFederico/Middleware/blob/main/P4-Virus_Spreading/docs/doc4.pdf)
+- [**Virus Spreading Documentation**](https://s0nn1.gitlab.io/doxygen-armello-cringe/)
 
 ## Requirements
 
