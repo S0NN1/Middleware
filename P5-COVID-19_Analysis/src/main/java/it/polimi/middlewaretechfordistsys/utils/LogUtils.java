@@ -3,6 +3,9 @@ package it.polimi.middlewaretechfordistsys.utils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+/**
+ * Utility class for logging purposes.
+ */
 public final class LogUtils {
 
     /***
