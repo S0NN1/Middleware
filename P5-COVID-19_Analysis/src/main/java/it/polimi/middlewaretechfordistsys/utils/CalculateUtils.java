@@ -1,6 +1,6 @@
 package it.polimi.middlewaretechfordistsys.utils;
 
-import it.polimi.middlewaretechfordistsys.model.Country;
+import it.polimi.middlewaretechfordistsys.model.DayCountryInfo;
 import it.polimi.middlewaretechfordistsys.model.Top10Countries;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -24,7 +24,7 @@ public final class CalculateUtils {
      * @param maxCountries number of countries
      * @param covidData input data
      */
-    public static void calculate(Map<Integer, ? extends HashMap<Integer, Country>> query1and2Result,
+    public static void calculate(Map<Integer, ? extends HashMap<Integer, DayCountryInfo>> query1and2Result,
                                  HashMap<Integer, ? extends Top10Countries> highscore, int maxDay, int maxCountries,
                                  Dataset<Row> covidData) {
 
@@ -77,7 +77,7 @@ public final class CalculateUtils {
     private static Double calculateValuesAndReturnMovingAverage(int rankId, Double previousMa, int currentDay,
                                                                 int[] newReportedCases,
                                                                 HashMap<Integer, ? extends Top10Countries> highscore,
-                                                                Map<Integer, ? extends HashMap<Integer, Country>> query1and2Result) {
+                                                                Map<Integer, ? extends HashMap<Integer, DayCountryInfo>> query1and2Result) {
         OptionalDouble movingAverageOptional = Arrays.stream(newReportedCases).average();
         if (movingAverageOptional.isPresent()) {
 
@@ -85,7 +85,7 @@ public final class CalculateUtils {
 
             Double maPercentageIncrease = (movingAverage / previousMa) * 100.0;
 
-            Country country = new Country(rankId, movingAverage, maPercentageIncrease, rankId, currentDay);
+            DayCountryInfo country = new DayCountryInfo(rankId, movingAverage, maPercentageIncrease, currentDay);
 
             Top10Countries top10Countries = highscore.get(currentDay);
             if (top10Countries != null) {

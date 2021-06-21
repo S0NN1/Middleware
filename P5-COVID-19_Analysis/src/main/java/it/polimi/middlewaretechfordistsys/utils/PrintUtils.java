@@ -1,6 +1,6 @@
 package it.polimi.middlewaretechfordistsys.utils;
 
-import it.polimi.middlewaretechfordistsys.model.Country;
+import it.polimi.middlewaretechfordistsys.model.DayCountryInfo;
 import it.polimi.middlewaretechfordistsys.model.Top10Countries;
 
 import java.util.HashMap;
@@ -18,13 +18,13 @@ public final class PrintUtils {
      * @param maxDay last day of our simulation
      * @param maxCountries total number of countries
      */
-    public static void print(HashMap<Integer, ? extends HashMap<Integer, Country>> query1and2Result, Map<Integer, ? extends Top10Countries> highscore, int maxDay, int maxCountries) {
+    public static void print(HashMap<Integer, ? extends HashMap<Integer, DayCountryInfo>> query1and2Result, Map<Integer, ? extends Top10Countries> highscore, int maxDay, int maxCountries) {
         //Print Query1
         System.out.println("Query 1");
         for (int i=0; i<maxDay; i++) {
-            HashMap<Integer, Country> h1 = query1and2Result.get(i);
+            HashMap<Integer, DayCountryInfo> h1 = query1and2Result.get(i);
             for (int j=0; j<maxCountries; j++) {
-                Country country = h1.get(j);
+                DayCountryInfo country = h1.get(j);
                 System.out.println("rank: " + country.countryRank + " day: " + i + " ma: " + country.movingAverageValue);
             }
         }
@@ -33,9 +33,9 @@ public final class PrintUtils {
         //Print Query2
         System.out.println("Query 2");
         for (int i=0; i<maxDay; i++) {
-            HashMap<Integer, Country> h1 = query1and2Result.get(i);
+            HashMap<Integer, DayCountryInfo> h1 = query1and2Result.get(i);
             for (int j=0; j<maxCountries; j++) {
-                Country country = h1.get(j);
+                DayCountryInfo country = h1.get(j);
                 System.out.println("rank: " + country.countryRank + " day: " + i + " perc_ma_inc: " + country.movingAverageIncrease + "%");
             }
         }

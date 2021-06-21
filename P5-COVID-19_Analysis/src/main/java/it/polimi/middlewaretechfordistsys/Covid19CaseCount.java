@@ -2,7 +2,7 @@ package it.polimi.middlewaretechfordistsys;
 
 import java.util.*;
 
-import it.polimi.middlewaretechfordistsys.model.Country;
+import it.polimi.middlewaretechfordistsys.model.DayCountryInfo;
 import it.polimi.middlewaretechfordistsys.model.Top10Countries;
 import it.polimi.middlewaretechfordistsys.utils.CalculateUtils;
 import it.polimi.middlewaretechfordistsys.utils.PrintUtils;
@@ -29,7 +29,7 @@ import static org.apache.spark.sql.functions.*;
 final class Covid19CaseCount {
 
     private static final HashMap<Integer, Top10Countries> highscore = new HashMap<>(); //query 3 result, indexed by days
-    private static final HashMap<Integer, HashMap<Integer, Country>> query1and2Result = new HashMap<>(); //query 1 and 2 result, indexed by days, then for countries
+    private static final HashMap<Integer, HashMap<Integer, DayCountryInfo>> query1and2Result = new HashMap<>(); //query 1 and 2 result, indexed by days, then for countries
 
     /***
      * Main method

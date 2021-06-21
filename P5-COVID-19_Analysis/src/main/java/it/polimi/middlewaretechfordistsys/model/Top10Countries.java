@@ -9,7 +9,9 @@ public class Top10Countries {
 
     // Fields
     public final Integer day;
-    private final ArrayList<Country> countryList = new ArrayList<>();
+    private final ArrayList<DayCountryInfo> countryList = new ArrayList<>();
+
+    public static final int maxCountries = 10;
 
     // Constructor
     public Top10Countries(int day) {
@@ -20,9 +22,9 @@ public class Top10Countries {
      * Update country list by inserting the provided country in the right position relying on its moving average.
      * @param country the country to be added.
      */
-    public final void update(Country country) {
+    public final void update(DayCountryInfo country) {
         Integer whereToInsert = findWhereToInsert(country.movingAverageIncrease);
-        if (countryList.size() < 10) {
+        if (countryList.size() < maxCountries) {
 
             if (whereToInsert == null) {
                 countryList.add(country);
@@ -36,7 +38,7 @@ public class Top10Countries {
             return;
         }
 
-        if (whereToInsert >= 10) {
+        if (whereToInsert >= maxCountries) {
             return;
         }
 
@@ -90,7 +92,7 @@ public class Top10Countries {
      */
     public final void print() {
         for (int i = 0; i < countryList.size(); i++) {
-            Country country = countryList.get(i);
+            DayCountryInfo country = countryList.get(i);
             String p = Integer.toString((i + 1));
 
             String cr = Integer.toString(country.countryRank);
@@ -106,7 +108,7 @@ public class Top10Countries {
         return "Top10Countries{" +
                 "day=" + day +
                 ", countryList=" + countryList +
-                ", numberOfCountries=" + 10 +
+                ", numberOfCountries=" + maxCountries +
                 '}';
     }
 }
