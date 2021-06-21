@@ -6,14 +6,17 @@ import it.polimi.middlewaretechfordistsys.model.Top10Countries;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Utility class for printing things.
+ */
 public final class PrintUtils {
 
     /***
      * Print the query results
      * @param query1and2Result object where query 1 and 2 results are stored
      * @param highscore object where query 3 result is stored
-     * @param maxDay last day
-     * @param maxCountries number of countries
+     * @param maxDay last day of our simulation
+     * @param maxCountries total number of countries
      */
     public static void print(HashMap<Integer, ? extends HashMap<Integer, Country>> query1and2Result, Map<Integer, ? extends Top10Countries> highscore, int maxDay, int maxCountries) {
         //Print Query1

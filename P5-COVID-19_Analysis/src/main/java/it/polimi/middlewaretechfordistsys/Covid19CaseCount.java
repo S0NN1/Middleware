@@ -19,20 +19,12 @@ import static org.apache.spark.sql.functions.*;
  * Covid19CaseCount
  *
  * Input: csv files with list of deposits and withdrawals, having the following
- * schema:
- *      {
- *          day :Integer,
- *          rank :Integer,
- *          infected :Integer,
- *          sane :Integer,
- *          infected_increment :Double,
- *          sane_increment :Double
- *      }
  *
- * Queries
- * Q1. Print the total amount of withdrawals for each person.
- * Q2. Print the person with the maximum total amount of withdrawals
- * Q3. Print all the accounts with a negative balance
+ * This class analyzes open datasets (csv) to study the evolution of COVID-19 situation worldwide.
+ * The following queries are computed:
+ * Q1: Seven days moving average of new reported cases, for each county and for each day
+ * Q2: Percentage increase (with respect to the day before) of the seven days moving average, for each country and for each day
+ * Q3: Top 10 countries with the highest percentage increase of the seven days moving average, for each day
  */
 final class Covid19CaseCount {
 
@@ -65,20 +57,20 @@ final class Covid19CaseCount {
                 .csv(filePath + "resources/csv/data.csv");
 
 
-        int maxDay = covidData.select(max("day")).first().getInt(0); //last day, from the input file
-        int maxCountries = covidData.select(max("rank")).first().getInt(0); //number of countries, from the input file
+        int maxDay = covidData.select(max("day")).first().getInt(0); // last day, from the input file
+        int maxCountries = covidData.select(max("rank")).first().getInt(0); // number of countries, from the input file
 
-        //Initialize result class in order to accomodate result data
+        // Initialize result class in order to accommodate result data
         for (int i=0; i<maxDay; i++)
         {
             highscore.put(i, new Top10Countries(i));
             query1and2Result.put(i, new HashMap<>());
         }
 
-        //Calculate the results
+        // Calculate the results
         CalculateUtils.calculate(query1and2Result, highscore, maxDay, maxCountries, covidData);
 
-        //Print the results
+        // Print the results
         PrintUtils.print(query1and2Result, highscore, maxDay, maxCountries);
 
 

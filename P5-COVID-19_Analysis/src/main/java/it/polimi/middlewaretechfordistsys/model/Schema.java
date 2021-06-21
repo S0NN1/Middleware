@@ -7,9 +7,20 @@ import org.apache.spark.sql.types.StructType;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * schema:
+ *  {
+ *      day :Integer,
+ *      rank :Integer,
+ *      infected :Integer,
+ *      sane :Integer,
+ *      infected_increment :Double,
+ *      sane_increment :Double
+ *  }
+ */
 public final class Schema {
 
-    public static StructType getSchema(){
+    public static StructType getSchema() {
         List<StructField> mySchemaFields = new ArrayList<>();
         mySchemaFields.add(DataTypes.createStructField("day", DataTypes.IntegerType, false));
         mySchemaFields.add(DataTypes.createStructField("rank", DataTypes.IntegerType, false));
