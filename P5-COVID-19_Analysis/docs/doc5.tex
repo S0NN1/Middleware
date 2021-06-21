@@ -1,0 +1,145 @@
+\documentclass[table, 12pt]{article}
+\usepackage{graphicx}
+
+
+\begin{document}
+
+\begin{titlepage}
+		\centering
+		{\scshape\large AY 2020/2021 \par}
+		\vfill
+		\includegraphics[width=100pt]{assets/logo-polimi-new}\par\vspace{1cm}
+		{\scshape\LARGE Politecnico di Milano \par}
+		\vspace{1.5cm}
+		{\huge\bfseries Middleware Technologies\\Analysis of COVID-19 Data\par}
+		\vspace{2cm}
+		{\Large {Federico Armellini\quad Luca Pirovano\quad Nicolò Sonnino}\par}
+		\vfill
+		{\large Professor\par
+			Alessandro \textsc{Margara}}
+		\vfill
+		{\large \textbf{Version 1.0}\\ \today \par}
+	\end{titlepage}
+
+	\thispagestyle{plain}
+	\pagenumbering{gobble}
+	\mbox{}
+	\newpage
+	\pagenumbering{roman}
+	\tableofcontents
+	\newpage
+	\pagenumbering{arabic}
+	
+	
+\section{Introduction and assignment}
+\subsection{Description of the project}
+In this project, you have to implement a program that analyzes open datasets to study the evolution of the
+COVID-19 situation worldwide. The program starts from the dataset of new reported cases for each country
+daily and computes the following queries:
+
+\begin{enumerate}
+
+
+\item Seven days moving average of new reported cases, for each county and for each day
+\item Percentage increase (with respect to the day before) of the seven days moving average, for each country
+and for each day
+\item Top 10 countries with the highest percentage increase of the seven days moving average, for each day
+\end{enumerate}
+You can either use real open datasets 1 or synthetic data generated with the simulator developed for Project 4.
+A performance analysis of the proposed solution is appreciated (but not mandatory). In particular, we are
+interested in studies that evaluate (1) how the execution time changes when increasing the size of the dataset
+and/or number of countries; (2) how the execution time decreases when adding more processing cores/hosts.
+
+\subsection{Assumptions and guidelines}
+ \begin{itemize}
+ 
+
+ 
+ \item
+When using a real dataset, for countries that provide weekly reports, you can assume that the weekly increment is evenly spread across the day of the week.
+
+ \end{itemize}
+
+
+
+\section{Solution Overview}
+\subsection{Architecture chosen}
+Apache Spark
+
+
+
+\subsection{Assumptions and Definitions}
+\begin{itemize}
+
+
+\setlength\itemsep{-0.5em}
+	\item The dataset is in the csv format. Each line contains: day, rank, number of infected people, number of sane people, number of new infected people (than the day before), the number of new sane people (than the day before).
+\end{itemize}
+
+\subsection{General solution}
+\subsubsection{Main and Calculate}
+
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+\item Doing a query that gets how many days and how many countries are in the data.
+\item Doing a for loop, we calculate for each country the necessary values for the 3 queries.
+\item Printing the results
+\end{itemize}
+
+\subsubsection{calculate (single country)}
+
+We handle diffently the first 7 days to the other ones (because they are special, the first doesn't have, for example, a previous moving avarage to compare to).
+
+So, for each day:
+
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+\item Query the data to get the number of new reported cases
+\item Calculating the neeed values for the 3 queries and storing them.
+\end{itemize}
+
+\subsection{Data structures}
+We use 2 main data structures: DayCountryInfo and Top10Countries.
+
+Then we have highscore (defined as HashMap<Integer, Top10Countries> indexed by day) and query1and2Result (defined as HashMap<Integer, HashMap<Integer, DayCountryInfo>>, indexed by day and country rank) to store the overall result of the 3 queries.
+
+\subsubsection{DayCountryInfo}
+DayCountryInfo stores information about a certain country in a certain day (its movingAverageValue, its movingAverageIncrease);
+
+\subsubsection{Top10Countries}
+Top10Countries stores in an arraylist, for each day, the information about the top 10 countries, as for query 3.
+
+
+\subsection{Performance evaluation}
+
+\subsubsection{Variables and parameters}
+\begin{flushleft}
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+\item $ queryWhereOnRank = maxContries $
+\item $ arrayCopyDays = maxDays/2 $
+\item $ queryWhereOnDay = maxDays $
+\item $ query3UpdateResults = log2(10) + 10 $
+\item $ query1and2UpdateResults = 1 $
+\end{itemize}
+\end{flushleft}
+
+\subsubsection{Equations}
+\begin{flushleft}
+\begin{itemize}
+\setlength\itemsep{-0.5em}
+\item $ maxCountries * ( queryWhereOnRank + maxDays * (arrayCopyDays + queryWhereOnDay + query3UpdateResults + query1and2UpdateResults) )  $
+\item $ maxCountries * ( maxContries + maxDays * (maxDays/2 + maxDays + (log2(10)+10) + 1) ) $
+\item $ maxCountries * ( maxContries + maxDays * (maxDays* 3/2 + 14.32) ) $
+\item $ maxCountries * ( maxContries + maxDays^2 * 3/2 + 14.32 * maxDays) ) $
+\item $  maxContries^2 + maxCountries * maxDays^2 * 1.5 + 14.32 * maxDays * maxCountries) $
+\end{itemize}
+\end{flushleft}
+
+
+\subsubsection{Conclusion}
+
+Overall performance is (simplified): \\
+  $  maxContries^2 + maxCountries * maxDays^2 * 1.5 $
+
+\end{document}
