@@ -18,7 +18,7 @@
 		{\large Professor\par
 			Alessandro \textsc{Margara}}
 		\vfill
-		{\large \textbf{Version 1.0}\\ \today \par}
+		{\large \textbf{Version 1.1}\\ \today \par}
 	\end{titlepage}
 
 	\thispagestyle{plain}
@@ -73,7 +73,7 @@ Apache Spark
 
 
 \setlength\itemsep{-0.5em}
-	\item The dataset is in the csv format. Each line contains: day, rank, number of infected people, number of sane people, number of new infected people (than the day before), the number of new sane people (than the day before).
+	\item The dataset is in CSV format. Each line contains day, rank, number of infected people, number of sane people, number of newly infected people (then the day before), the number of new sane people (then the day before).
 \end{itemize}
 
 \subsection{General solution}
@@ -101,7 +101,7 @@ So, for each day:
 \subsection{Data structures}
 We use 2 main data structures: DayCountryInfo and Top10Countries.
 
-Then we have highscore (defined as HashMap<Integer, Top10Countries> indexed by day) and query1and2Result (defined as HashMap<Integer, HashMap<Integer, DayCountryInfo>>, indexed by day and country rank) to store the overall result of the 3 queries.
+Then we have highscore (defined as HashMap$<$Integer, Top10Countries$>$ indexed by day) and query1and2Result (defined as HashMap$<$Integer, HashMap$<$Integer, DayCountryInfo$>>$, indexed by day and country rank) to store the overall result of the 3 queries.
 
 \subsubsection{DayCountryInfo}
 DayCountryInfo stores information about a certain country in a certain day (its movingAverageValue, its movingAverageIncrease);
