@@ -16,4 +16,4 @@
 | 5 | Analysis of COVID-19 Data | Alessandro Margara | Apache Spark | [Readme](https://github.com/ArmelliniFederico/Middleware/blob/main/P5-COVID-19_Analysis/README.md) | [PDF](https://github.com/ArmelliniFederico/Middleware/blob/main/P5-COVID-19_Analysis/docs/doc5.pdf) |
 
 ## How to run
-Check out latest release [**here**](https://github.com/ArmelliniFederico/Middleware/releases)
+Check out latest release [**here**](https://github.com/ArmelliniFederico/Middleware/releases).
