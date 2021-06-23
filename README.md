@@ -17,3 +17,5 @@
 
 ## How to run
 Check out latest release [**here**](https://github.com/ArmelliniFederico/Middleware/releases).
+
+Detailed installation and running instructions can be found in each project README, reachable from the upside table links.
