@@ -117,13 +117,13 @@ public class Main {
 
 
         ArrayList<person> people = getPeople(nationItem);
-        Dictionary<person, ArrayList<vicinanza>> storicoContatti = new Hashtable<>();
+        Dictionary<person, ArrayList<vicinanza>> contactHistory = new Hashtable<>();
 
         for (int i=0; i<days; i++)
         {
             if (my_rank != 0 || true) { //todo: remove "|| true"
                 buffer2=  calcolaAvanzamentoContagi(buffer, buffer2, nationItem,
-                        my_rank, t, d, people, storicoContatti,w,l);
+                        my_rank, t, d, people, contactHistory,w,l);
             }
 
             buffer3 = mpi_gather(
@@ -265,7 +265,7 @@ public class Main {
                 individualSummary[][] buffer2, nazione nationItem,
                 int rank, int t, int d,
                 ArrayList<person> people,
-                Dictionary<person, ArrayList<vicinanza>> storicoContatti,
+                Dictionary<person, ArrayList<vicinanza>> contactHistory,
                 int w, int l)
     {
         buffer2 = buffer;
@@ -285,7 +285,7 @@ public class Main {
             for (int i = 0; i < t2; i++) {
                 buffer = calcolaAvanzamentoContagi2(buffer, sb2,
                         rank, t, d, people,
-                        storicoContatti, w, l, i, sbi);
+                        contactHistory, w, l, i, sbi);
 
 
                 //printArray(buffer, rank);
@@ -315,14 +315,14 @@ public class Main {
     private static individualSummary[][]
         calcolaAvanzamentoContagi2(
             individualSummary[][] buffer,
-            subnazione subNazioneItem, int rank,
+            subnazione subNationItem, int rank,
             int t, int d, ArrayList<person> people,
-            Dictionary<person, ArrayList<vicinanza>> storicoContatti,
-            int w, int l, int i_t2, int subnazioneIndex)
+            Dictionary<person, ArrayList<vicinanza>> contactHistory,
+            int w, int l, int i_t2, int subnationIndex)
     {
 
 
-        if (buffer[rank][subnazioneIndex].infetti > 0) {
+        if (buffer[rank][subnationIndex].infetti > 0) {
 
             for (person p : people) {
 
@@ -330,37 +330,37 @@ public class Main {
 
                 if (t * i_t2 >= p.lastTimeHeWasInfected + durataPerGuarire && p.inInfected) {
                     p.inInfected = false;
-                    buffer[rank][subnazioneIndex].infetti--;
-                    buffer[rank][subnazioneIndex].sani++;
+                    buffer[rank][subnationIndex].infetti--;
+                    buffer[rank][subnationIndex].sani++;
                 }
 
-                if (buffer[rank][subnazioneIndex].infetti > 0) {
-                    ArrayList<Integer> r = trovaRettangolo(subNazioneItem, p, d, rank, w, l);
+                if (buffer[rank][subnationIndex].infetti > 0) {
+                    ArrayList<Integer> r = trovaRettangolo(subNationItem, p, d, rank, w, l);
                     if (r != null) {
                         for (int i = 0, rSize = r.size(); i < rSize; i++) {
-                            ArrayList<person> peopleNear = getPeopleNear(r.get(i), subNazioneItem, w, l);
+                            ArrayList<person> peopleNear = getPeopleNear(r.get(i), subNationItem, w, l);
                             for (person p2 : peopleNear) {
                                 if (p2 != p && p2.inInfected) {
-                                    var vicinanzaItem = TrovaVicinanza(p, p2, storicoContatti);
+                                    var vicinanzaItem = TrovaVicinanza(p, p2, contactHistory);
                                     if (vicinanzaItem == null) {
                                         vicinanza v = new vicinanza();
                                         v.from = p;
                                         v.timeFine = t * i_t2;
                                         v.timeInizio = t * i_t2;
                                         v.to = p2;
-                                        var v2 = storicoContatti.get(p);
+                                        var v2 = contactHistory.get(p);
                                         if (v2 != null) {
                                             v2.add(v);
                                         } else {
-                                            storicoContatti.put(p, new ArrayList<>());
-                                            v2 = storicoContatti.get(p);
+                                            contactHistory.put(p, new ArrayList<>());
+                                            v2 = contactHistory.get(p);
                                             v2.add(v);
                                         }
 
                                         if (v.timeFine - v.timeInizio >= minDurataPerInfettarsi && !p.inInfected) {
                                             p.inInfected = true;
-                                            buffer[rank][subnazioneIndex].sani--;
-                                            buffer[rank][subnazioneIndex].infetti++;
+                                            buffer[rank][subnationIndex].sani--;
+                                            buffer[rank][subnationIndex].infetti++;
                                             p.lastTimeHeWasInfected = t * i_t2;
                                         }
 
@@ -369,8 +369,8 @@ public class Main {
 
                                         if (vicinanzaItem.timeFine - vicinanzaItem.timeInizio >= minDurataPerInfettarsi && !p.inInfected) {
                                             p.inInfected = true;
-                                            buffer[rank][subnazioneIndex].sani--;
-                                            buffer[rank][subnazioneIndex].infetti++;
+                                            buffer[rank][subnationIndex].sani--;
+                                            buffer[rank][subnationIndex].infetti++;
                                             p.lastTimeHeWasInfected = t * i_t2;
                                         }
                                     }
@@ -439,9 +439,9 @@ public class Main {
     }
 
     private static vicinanza TrovaVicinanza(person p, person p2, Dictionary<person,
-            ArrayList<vicinanza>> storicoContatti) {
+            ArrayList<vicinanza>> contactHistory) {
 
-        var t1 = storicoContatti.get(p);
+        var t1 = contactHistory.get(p);
         if (t1 == null)
             return null;
 
@@ -479,9 +479,9 @@ public class Main {
     }
 
     /*
-    private static rettangolo trovaRettangolo2(subnazione subNazioneItem, int x, int y, int rank) {
-        for (var i: subNazioneItem.rettangoli){
-            if (i.p.x == x && i.p.y == y && subNazioneItem.rank == rank)
+    private static rettangolo trovaRettangolo2(subnazione subNationItem, int x, int y, int rank) {
+        for (var i: subNationItem.rettangoli){
+            if (i.p.x == x && i.p.y == y && subNationItem.rank == rank)
                 return i;
         }
 
