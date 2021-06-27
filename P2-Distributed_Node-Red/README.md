@@ -91,3 +91,10 @@ Once started both backend and Node-Red, simply open a web browser, browse http:/
 - import the existent flows, which can be found [here](.github/json/flows.json)
 - start one or more registration flows, on the dedicated tab,
 - start one or more sending flows, specifying the destination node.
+
+### Configuration of Node-Red
+In order to make this project working, it is necessary to configure IP addresses of remote server and local machine.
+
+- in the "Registration Flow" tab, double-click the inject block of each line and, in the json body, edit the IP address by putting the address of current network;
+- in the "Registration Flow" tab, double-click the http request block and edit the URL by putting the address of the backend server;
+- in each "Computation Flow", edit the http request block URL by putting the address of the backend server.
