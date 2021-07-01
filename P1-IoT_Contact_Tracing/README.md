@@ -167,7 +167,7 @@ Open `Connect` section and choose the default one.
 
 ![kek](.github/images/connect-screen.png)
 
-Then create two MQTTSourceConnector with the following settings:
+Then create two MQTTSourceConnectors with the following settings:
 
 ![kek](.github/images/mqtt-source-screen.png)
 
