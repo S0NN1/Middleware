@@ -211,7 +211,7 @@ java -Dlog4j.configuration=file:"log4j.properties" -jar  KafkaProducerContactTra
 Compile and run the `border-router.c` file under `<your-contiki-path>/examples/rpl-border-router/` with:
 
 ```bash
-make TARGET=native connect-router-cooja
+make TARGET=cooja connect-router-cooja
 sudo ./connect-router
 ```
 
