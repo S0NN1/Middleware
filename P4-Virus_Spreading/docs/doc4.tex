@@ -31,7 +31,7 @@
 		\centering
 		{\scshape\large AY 2020/2021 \par}
 		\vfill
-		\includegraphics[width=100pt]{assets/logo-polimi-new}\par\vspace{1cm}
+		\includegraphics[width=100pt]{assets/logo_polimi.png}\par\vspace{1cm}
 		{\scshape\LARGE Politecnico di Milano \par}
 		\vspace{1.5cm}
 		{\huge\bfseries Middleware Technologies\\Model for Virus Spreading\par}
@@ -41,7 +41,7 @@
 		{\large Professor\par
 			Alessandro \textsc{Margara}}
 		\vfill
-		{\large \textbf{Version 1.1}\\ \today \par}
+		{\large \textbf{Version 1.2}\\ \today \par}
 	\end{titlepage}
 	\hypersetup{%
 		pdfborder = {0 0 0}
@@ -130,12 +130,12 @@ MPI
 
 \subsubsection{infectionDayStep}
 
-For every country a mpi process have to manage, for every step of the timestep, for every people inside a country:
+For every country a mpi process have to manage, for every step of the timestep, for every person inside a country:
 
 \begin{itemize}
 \setlength\itemsep{-0.5em}
 \item Check, if already infected, enough time has passed in order to heal from the virus
-\item Check people aroud him/her in order to understand, if they are infected, if the person we are analysing becomes infected as well (keeping in mind that there is 3 months to wait if he/her had recovered recently in order to get infected again).
+\item Check people around him/her in order to understand, if they are infected, if the person we are analysing becomes infected as well (keeping in mind that there is 3 months to wait if he/she had recovered recently in order to get infected again).
 \end{itemize}
 
 \subsection{Data structures}
@@ -146,13 +146,13 @@ We store the history of contacts a person had with other people in an hash table
 We store those information about an individual: 
 \begin{itemize}
 \setlength\itemsep{-0.5em}
-\item Rank of the mpi process he/her belongs to
-\item Which sub-area (subnation) he/her belongs to
+\item Rank of the mpi process he/she belongs to
+\item Which sub-area (subnation) he/she belongs to
 \item Id
-\item Position (x and y) related to the subnation he/her belongs to 
-\item If he/her is infected
-\item The timestamp of the last time he/her was infected
-\item The timestamp of the last time he/her recovered from the virus
+\item Position (x and y) related to the subnation he/she belongs to 
+\item If he/she is infected
+\item The timestamp of the last time he/she was infected
+\item The timestamp of the last time he/she recovered from the virus
 \end{itemize}
 
 \subsubsection{Contact history}
