@@ -34,6 +34,10 @@ Full specification can be found [**here**](../specs/specification.pdf) under Pro
 You can find detailed documentation at:
 - [**Spark COVID Analysis**](https://pirox4256.github.io/middleware-spark-javadocs/)
 
+### Design document
+
+You can find the design document [here](https://github.com/ArmelliniFederico/Middleware/blob/main/P5-COVID-19_Analysis/docs/doc5.pdf)
+
 ## Requirements
 
 - [Java Programming Language](https://www.java.com/it/)

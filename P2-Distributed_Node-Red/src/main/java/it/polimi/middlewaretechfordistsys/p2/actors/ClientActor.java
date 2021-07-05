@@ -71,8 +71,8 @@ public class ClientActor extends AbstractActor {
     public void onRegistrationFailed(AlreadyRegisteredException e) {}
 
     public void onRegistrationMessage(RegistrationMessage message) {
-        CompletableFuture<Object> kek = Patterns.ask(server, message, Duration.ofSeconds(5)).toCompletableFuture();
-        kek.thenApply(resp -> {
+        CompletableFuture<Object> x = Patterns.ask(server, message, Duration.ofSeconds(5)).toCompletableFuture();
+        x.thenApply(resp -> {
             if(resp instanceof RegistrationConfirmationMessage) {
                 sender().tell("OK", ActorRef.noSender());
             }
