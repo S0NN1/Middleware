@@ -167,7 +167,7 @@ Open `Connect` section and choose the default one.
 
 ![kek](.github/images/connect-screen.png)
 
-Then create two MQTTSourceConnector with the following settings:
+Then create two MQTTSourceConnectors with the following settings:
 
 ![kek](.github/images/mqtt-source-screen.png)
 
@@ -211,7 +211,7 @@ java -Dlog4j.configuration=file:"log4j.properties" -jar  KafkaProducerContactTra
 Compile and run the `border-router.c` file under `<your-contiki-path>/examples/rpl-border-router/` with:
 
 ```bash
-make TARGET=native connect-router
+make TARGET=cooja connect-router-cooja
 sudo ./connect-router
 ```
 
