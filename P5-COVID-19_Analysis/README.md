@@ -21,7 +21,7 @@ Full specification can be found [**here**](../specs/specification.pdf) under Pro
 
 ## Architecture
 
-<img src=".github/images/middleware-p5.svg" align="center">
+<img src=".github/images/middleware-p5.png" align="center">
 
 
 
