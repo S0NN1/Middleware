@@ -19,6 +19,9 @@ import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.regex.Pattern;
 
+import static org.apache.spark.sql.functions.dense_rank;
+import static org.apache.spark.sql.functions.desc;
+
 public class Covid19Analysis {
 
     public static void main(String[] args) {
@@ -40,14 +43,21 @@ public class Covid19Analysis {
         // TASK 2
         WindowSpec ws2 = Window.partitionBy("countriesAndTerritories").orderBy("date");
         Dataset<Row> df2 = df1.withColumn("prevValue", functions.round(functions.lag("movingAverage", 1).over(ws2), 2));
-        Dataset<Row> df3 = df2.withColumn("perc_increase", functions .when(functions
-                        .isnull(df2
-                                .col("movingAverage")
-                                .minus(df2.col("prevValue"))),0)
-                .otherwise(functions.round(df2
-                        .col("movingAverage")
-                        .minus(df2.col("prevValue")).divide(df2.col("prevValue")).multiply(100).cast("float"), 2))).drop("prevValue");
-        df3.show(100);
+        Column col3 = df2.col("movingAverage").minus(df2.col("prevValue"));
+        Column col2 = col3.divide(df2.col("prevValue")).multiply(100).cast("float");
+        Dataset<Row> df3 = df2.withColumn("perc_increase", functions.when(functions.isnull(col3),0)
+                .otherwise(functions.round(col2, 2))).drop("prevValue");
+
+        //TASK 3
+        WindowSpec ws3 = Window.partitionBy("date").orderBy(functions.desc("perc_increase"));
+        Dataset<Row> df4 = df3.withColumn("rankingPercIncrease", dense_rank().over(ws3));
+        Dataset<Row> df5 = df4.where("rankingPercIncrease<=10").orderBy("date");
+
+
+        //Print results
+        df3.show(1000); // Query 1 and 2
+        df5.show(1000); // Query 3
+
     }
 
 }
