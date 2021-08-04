@@ -34,6 +34,10 @@ Full specification can be found [**here**](../specs/specification.pdf) under Pro
 You can find detailed documentation at:
 - [**Virus Spreading Documentation**](https://s0nn1.gitlab.io/doxygen-virus-spreading)
 
+### Design document
+
+You can find the design document [here](https://github.com/ArmelliniFederico/Middleware/blob/main/P4-Virus_Spreading/docs/doc4.pdf)
+
 ## Requirements
 
 - [C Programming Language](https://www.learn-c.org/)

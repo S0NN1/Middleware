@@ -21,7 +21,7 @@ Full specification can be found [**here**](../specs/specification.pdf) under Pro
 
 ## Architecture
 
-<img src=".github/images/middleware-p5.svg" align="center">
+<img src=".github/images/middleware-p5.png" align="center">
 
 
 
@@ -33,6 +33,10 @@ Full specification can be found [**here**](../specs/specification.pdf) under Pro
 
 You can find detailed documentation at:
 - [**Spark COVID Analysis**](https://pirox4256.github.io/middleware-spark-javadocs/)
+
+### Design document
+
+You can find the design document [here](https://github.com/ArmelliniFederico/Middleware/blob/main/P5-COVID-19_Analysis/docs/doc5.pdf)
 
 ## Requirements
 

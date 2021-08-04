@@ -47,6 +47,10 @@ You can find detailed documentation at:
 - [**contact-tracing.c doxygen**](https://s0nn1.gitlab.io/doxygen-middleware/)
 - [**KafkaKsqlProducer javadocs**](https://s0nn1.github.io/javadoc-middleware/)
 
+### Design document
+
+You can find the design document [here](https://github.com/ArmelliniFederico/Middleware/blob/main/P1-IoT_Contact_Tracing/docs/contact-tracing.pdf)
+
 ## Requirements
 
 - [Docker](https://docs.docker.com/get-docker/) (remote server).
@@ -141,15 +145,15 @@ docker-compose ps
 
 You should see an output like this:
 
-![kek](.github/images/docker-compose-ps-screen.png)
+![image](.github/images/docker-compose-ps-screen.png)
 
 After waiting for about 3 minutes you should reach (assuming you have done port-forwarding on your server) the Confluent Control Center at `REMOTE_SERVER_IP_ADDRESS:9021`.
 
-![kek](.github/images/control-center-screen.png)
+![image](.github/images/control-center-screen.png)
 
 You can now create Kafka topics by clicking on the cluster and under the `Topics` section
 
-![kek](.github/images/topics-screen.png)
+![image](.github/images/topics-screen.png)
 
 Create three topics with the following names (change them if you want to customize them as described in the **Configuration** section):
 
@@ -159,21 +163,21 @@ Create three topics with the following names (change them if you want to customi
 
 Each topic must have `Replication factor` set to 1 like the following.
 
-![kek](.github/images/replication-screen.png)
+![image](.github/images/replication-screen.png)
 
 Now setup the two connectors responsible to read and write from MQTT to Kafka and vice versa.
 
 Open `Connect` section and choose the default one.
 
-![kek](.github/images/connect-screen.png)
+![image](.github/images/connect-screen.png)
 
-Then create two MQTTSourceConnector with the following settings:
+Then create two MQTTSourceConnectors with the following settings:
 
-![kek](.github/images/mqtt-source-screen.png)
+![image](.github/images/mqtt-source-screen.png)
 
 Finally one MQTTSinkConnector with this config:
 
-![kek](.github/images/mqtt-sink-screen.png)
+![image](.github/images/mqtt-sink-screen.png)
 
 You should see their status as `Running`, otherwise you can check the status of the connect container for possible errors by typing:
 
@@ -211,7 +215,7 @@ java -Dlog4j.configuration=file:"log4j.properties" -jar  KafkaProducerContactTra
 Compile and run the `border-router.c` file under `<your-contiki-path>/examples/rpl-border-router/` with:
 
 ```bash
-make TARGET=native connect-router
+make TARGET=cooja connect-router-cooja
 sudo ./connect-router
 ```
 

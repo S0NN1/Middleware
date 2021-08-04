@@ -41,6 +41,10 @@ The general Architecture consists into:
 You can find detailed documentation at:
 - [**Akka Node-Red backend**](https://pirox4256.github.io/node-red-javadocs/)
 
+### Design document
+
+You can find the design document [here](https://github.com/ArmelliniFederico/Middleware/blob/main/P2-Distributed_Node-Red/docs/tex/p2.pdf)
+
 ## Requirements
 
 - [Java JDK 16](https://openjdk.java.net/projects/jdk/16/) (backend).

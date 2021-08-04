@@ -621,7 +621,7 @@ long rectIndex(long x, long y, long w, long l) {
 }
 
 /*******************************************************************************************************************//**
- * @brief Function determines near cells of an individual in order to understand if he/her is near infected people.
+ * @brief Function determines near cells of an individual in order to understand if he/she is near infected people.
  * 
  * @param subnationItem subnation.
  * @param p individual.
@@ -795,7 +795,7 @@ struct individualSummaryWithRank*
 			if (plist[ip]->subnation != subnationIndex)
 				continue;
 
-			//if he/her is infected and it's time become healthier again
+			//if he/she is infected and it's time become healthier again
 			if ((plist[ip]->lastTimeHeWasInfected < 0 && plist[ip]->isInfected == 1) || ((t * i_t2 + day_in_seconds) >= plist[ip]->lastTimeHeWasInfected + minTimeToHeal && plist[ip]->isInfected == 1)) { 
 				plist[ip]->isInfected = 0;
 				buffer[subnationIndex].individualSummary.infected--;
