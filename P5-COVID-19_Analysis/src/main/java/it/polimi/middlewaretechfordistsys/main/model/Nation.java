@@ -1,4 +1,4 @@
-package it.polimi.middlewaretechfordistsys.model;
+package it.polimi.middlewaretechfordistsys.main.model;
 
 import java.io.Serializable;
 import java.util.Date;

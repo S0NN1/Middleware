@@ -1,4 +1,6 @@
-package it.polimi.middlewaretechfordistsys.model;
+package it.polimi.middlewaretechfordistsys.old.model;
+
+import it.polimi.middlewaretechfordistsys.old.utils.LogUtils;
 
 import java.util.ArrayList;
 
@@ -97,8 +99,8 @@ public class Top10Countries {
 
             String cr = Integer.toString(country.countryRank);
             System.out.println(
-                    "PositionInHighscore: " + it.polimi.middlewaretechfordistsys.utils.LogUtils.padLeftZeros(p, 2) +
-                            " | CountryRank: " + it.polimi.middlewaretechfordistsys.utils.LogUtils.padLeftZeros(cr, 2) +
+                    "PositionInHighscore: " + LogUtils.padLeftZeros(p, 2) +
+                            " | CountryRank: " + LogUtils.padLeftZeros(cr, 2) +
                             " | MovingAverageIncrease: " + country.movingAverageIncrease);
         }
     }

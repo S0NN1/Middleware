@@ -1,4 +1,4 @@
-package it.polimi.middlewaretechfordistsys.model;
+package it.polimi.middlewaretechfordistsys.old.model;
 
 /***
  * Data about a country, in a given rank and day

@@ -1,4 +1,4 @@
-package it.polimi.middlewaretechfordistsys.model;
+package it.polimi.middlewaretechfordistsys.old.model;
 
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;

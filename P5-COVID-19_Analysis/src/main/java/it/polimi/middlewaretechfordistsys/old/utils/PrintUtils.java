@@ -1,7 +1,7 @@
-package it.polimi.middlewaretechfordistsys.utils;
+package it.polimi.middlewaretechfordistsys.old.utils;
 
-import it.polimi.middlewaretechfordistsys.model.DayCountryInfo;
-import it.polimi.middlewaretechfordistsys.model.Top10Countries;
+import it.polimi.middlewaretechfordistsys.old.model.DayCountryInfo;
+import it.polimi.middlewaretechfordistsys.old.model.Top10Countries;
 
 import java.util.HashMap;
 import java.util.Map;
