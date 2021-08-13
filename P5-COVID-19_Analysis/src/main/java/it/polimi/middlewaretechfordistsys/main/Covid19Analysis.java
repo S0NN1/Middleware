@@ -1,17 +1,27 @@
 package it.polimi.middlewaretechfordistsys.main;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.expressions.Window;
 import org.apache.spark.sql.expressions.WindowSpec;
+import org.slf4j.LoggerFactory;
 
-import static org.apache.spark.sql.functions.dense_rank;
+import org.slf4j.Logger;
+
 import static org.apache.spark.sql.functions.rank;
 
 public final class Covid19Analysis {
 
     public static void main(final String[] args) {
+
+        Logger logger = LoggerFactory.getLogger("Logger");
+        LogManager.getRootLogger().setLevel(Level.OFF);
+
+        java.util.logging.Logger.getLogger("org.apache.spark").setLevel(java.util.logging.Level.WARNING);
+        java.util.logging.Logger.getLogger("org.spark-project").setLevel(java.util.logging.Level.WARNING);
 
         final int maxRankCountries = 10;
 
@@ -22,8 +32,6 @@ public final class Covid19Analysis {
                 .builder()
                 .appName("Covid-19 Data")
                 .getOrCreate();
-        //JavaRDD<String> data = sc.textFile("resources/csv/ecdc/data.csv");
-        //final SQLContext sqlContext = new SQLContext(sc);
 
         // TASK 1
         final Dataset<Row> df = spark.read().format("csv").option("header", "true").option("inferSchema", true).load(filePath + "resources/csv/ecdc/data.csv");
