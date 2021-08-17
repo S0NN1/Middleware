@@ -1,5 +1,7 @@
 \documentclass[table, 12pt]{article}
 \usepackage{graphicx}
+\usepackage{listings}
+
 
 
 \begin{document}
@@ -77,38 +79,104 @@ Apache Spark
 \end{itemize}
 
 \subsection{General solution}
-\subsubsection{Main and Calculate}
 
+The project is based on SparkSQL library, which permits doing SQL query and distribute them among the machines in the Apache Spark cluster.
+
+We used the data provided from ECDC (European Centre For Disease Control and Prevention) which has a general report of Covid-19 in 2020.
+
+\subsection{Queries}
+\subsubsection{Query 1}
+
+
+The first query goal is to calculate a moving average of a window of 7 days.
+
+To do this, we adopted the following approach:
+\lstset{%
+caption=,
+basicstyle=\ttfamily\footnotesize\bfseries,
+frame=tb
+}
+\begin{lstlisting}[language=Java, caption=Query 1]
+	final WindowSpec ws1 = Window
+	.partitionBy("countriesAndTerritories")
+	.orderBy("date", "geoId")
+	.rowsBetween(-6,0);
+
+	final Column col1 = functions.avg("cases").over(ws1);
+
+	final Dataset<Row> df1 = df
+	.withColumn("date", functions
+		.to_timestamp(df.col("dateRep"), "dd/MM/yyyy"))
+	.withColumn("movingAverage", functions.round(col1, 2));
+\end{lstlisting}
+
+The Window declaration defines a custom window which is:
 \begin{itemize}
-\setlength\itemsep{-0.5em}
-\item Doing a query that gets how many days and how many countries are in the data.
-\item Doing a for loop, we calculate for each country the necessary values for the 3 queries.
-\item Printing the results
+	\item partitioned by countries name;
+	\item ordered by their geoId and date of observation
+	\item 7 days large, which means that it considers a week from the day considered.
 \end{itemize}
 
-\subsubsection{calculate (single country)}
+\subsubsection{Query 2}
+The second query goal is to calculate the percentage increase of the moving average calculated at point 1 with respect to the day before.
 
-We handle differently the first 7 days to the other ones (because they are special, the first doesn’t have, for example, a previous moving average to compare to).
+\lstset{%
+caption=,
+basicstyle=\ttfamily\footnotesize\bfseries,
+frame=tb
+}
+\begin{lstlisting}[language=Java, caption=Query 2]
+	final WindowSpec ws2 = Window
+	.partitionBy("countriesAndTerritories")
+	.orderBy("date", "geoId");
 
-So, for each day:
+	final Dataset<Row> df2 = df1
+	.withColumn("prevValue", functions
+		.round(functions.lag("movingAverage", 1).over(ws2), 2));
 
-\begin{itemize}
-\setlength\itemsep{-0.5em}
-\item Query the data to get the number of newly reported cases
-\item Calculating the needed values for the 3 queries and storing them.
-\end{itemize}
+	final Column col3 = df2
+	.col("movingAverage").minus(df2.col("prevValue"));
 
-\subsection{Data structures}
-We use 2 main data structures: DayCountryInfo and Top10Countries.
+	final Column col2 = col3
+	.divide(df2.col("prevValue")).multiply(100).cast("float");
 
-Then we have highscore (defined as HashMap$<$Integer, Top10Countries$>$ indexed by day) and query1and2Result (defined as HashMap$<$Integer, HashMap$<$Integer, DayCountryInfo$>>$, indexed by day and country rank) to store the overall result of the 3 queries.
+	Dataset<Row> df3 = df2
+	.withColumn("perc_increase", functions
+		.when(functions.isnull(col3),0)
+		.otherwise(functions.round(col2, 2))).drop("prevValue");
 
-\subsubsection{DayCountryInfo}
-DayCountryInfo stores information about a certain country in a certain day (its movingAverageValue, its movingAverageIncrease);
+	df3 = df3.filter(df3.col("perc_increase").isNotNull());
+\end{lstlisting}
 
-\subsubsection{Top10Countries}
-Top10Countries stores in an arraylist, for each day, the information about the top 10 countries, as for query 3.
+Again we have a window which is the same of the one declared for query 1.
 
+Then, we create a new column \textit{prevValue} which represent the moving average value of the day before.
+
+This value is then used to create a column \textit{perc\_increase} which is calculated in that way.
+
+$perc\_increase = \displaystyle{\frac{maCurrent - maDayBefore}{maDayBefore} * 100}$
+
+\subsubsection{Query 3}
+\lstset{%
+caption=,
+basicstyle=\ttfamily\footnotesize\bfseries,
+frame=tb
+}
+\begin{lstlisting}[language=Java, caption=Query 3]
+	final WindowSpec ws3 = Window
+	.partitionBy("date")
+	.orderBy(functions.desc("perc_increase"));
+
+	final Dataset<Row> df4 = df3
+	.withColumn("rankingPercIncrease", rank().over(ws3));
+
+	final Dataset<Row> df5 = df4
+	.where("rankingPercIncrease<=" + maxRankCountries)
+	.orderBy("date", "rankingPercIncrease");
+\end{lstlisting}
+Again we have a window which is the same of the one declared for query 1.
+
+Then, we calculate the rank of nations relying on their percentage increase.
 
 \subsection{Performance evaluation}
 

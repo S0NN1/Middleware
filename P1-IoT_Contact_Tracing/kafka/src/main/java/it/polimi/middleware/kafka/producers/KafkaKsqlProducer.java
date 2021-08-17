@@ -6,6 +6,7 @@ import it.polimi.middleware.kafka.utils.Utils;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.eclipse.paho.client.mqttv3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +60,7 @@ public class KafkaKsqlProducer {
      * @throws ExecutionException   the execution exception.
      * @throws InterruptedException the interrupted exception.
      */
-    public static void main(String[] args) throws ExecutionException, InterruptedException {
+    public static void main(String[] args) throws ExecutionException, InterruptedException, MqttException {
         //Kafka producer settings.
         Properties props = Utils.setupProducerProps();
         Producer<String, String> producer = new KafkaProducer<>(props);
@@ -116,16 +117,29 @@ public class KafkaKsqlProducer {
                 List<Row> queryResult1 = ksqlClient.executeQuery(pullQuery, properties).get();
                 logger.info("Received an alert from client " + clientId + ". Creating a mqtt alert message...");
                 //Each client ID ha a column in the table with a JsonArray storing all motes encountered.
+                String publisherId = UUID.randomUUID().toString();
+                IMqttClient client = new MqttClient("tcp://51.103.25.211:1883", publisherId);
+                MqttConnectOptions options = new MqttConnectOptions();
+                options.setAutomaticReconnect(true);
+                options.setCleanSession(true);
+                options.setConnectionTimeout(10);
+                client.connect(options);
                 for (Row result : queryResult1) {
                     JsonArray array = (JsonArray) result.getValue(2);
                     for (Object json : array) {
-                        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+                        //Timestamp timestamp = new Timestamp(System.currentTimeMillis());
                         String value = "{" +
                                 "\"AlertDest\":\"" + json + "\", " +
                                 "\"AlertSource\":\"" + clientId + "\"" +
                                 "}";
+
+                        MqttMessage msg = new MqttMessage(value.getBytes());
+                        msg.setQos(1);
+                        msg.setRetained(false);
+                        client.publish(json.toString(), msg);
+                        logger.info("Published on topic " + json);
                         //Write on Kafka topic.
-                        producer.send(new ProducerRecord<>("kafka-to-mqtt-alerts", timestamp.toString(), value));
+                        //producer.send(new ProducerRecord<>("kafka-to-mqtt-alerts", timestamp.toString(), value));
                     }
                 }
                 logger.info("Alerts sent to clients who has been in contact with " + clientId);
