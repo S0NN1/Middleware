@@ -178,36 +178,6 @@ Again we have a window which is the same of the one declared for query 1.
 
 Then, we calculate the rank of nations relying on their percentage increase.
 
-\subsection{Performance evaluation}
 
-\subsubsection{Variables and parameters}
-\begin{flushleft}
-\begin{itemize}
-\setlength\itemsep{-0.5em}
-\item $ queryWhereOnRank = maxContries $
-\item $ arrayCopyDays = maxDays/2 $
-\item $ queryWhereOnDay = maxDays $
-\item $ query3UpdateResults = log2(10) + 10 $
-\item $ query1and2UpdateResults = 1 $
-\end{itemize}
-\end{flushleft}
-
-\subsubsection{Equations}
-\begin{flushleft}
-\begin{itemize}
-\setlength\itemsep{-0.5em}
-\item $ maxCountries * ( queryWhereOnRank + maxDays * (arrayCopyDays + queryWhereOnDay + query3UpdateResults + query1and2UpdateResults) )  $
-\item $ maxCountries * ( maxContries + maxDays * (maxDays/2 + maxDays + (log2(10)+10) + 1) ) $
-\item $ maxCountries * ( maxContries + maxDays * (maxDays* 3/2 + 14.32) ) $
-\item $ maxCountries * ( maxContries + maxDays^2 * 3/2 + 14.32 * maxDays) ) $
-\item $  maxContries^2 + maxCountries * maxDays^2 * 1.5 + 14.32 * maxDays * maxCountries) $
-\end{itemize}
-\end{flushleft}
-
-
-\subsubsection{Conclusion}
-
-Overall performance is (simplified): \\
-  $  maxContries^2 + maxCountries * maxDays^2 * 1.5 $
 
 \end{document}
