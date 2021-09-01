@@ -197,7 +197,7 @@ static void echo_reply_handler(uip_ipaddr_t *source, uint8_t ttl, uint8_t *data,
 {
     if (uip_ip6addr_cmp(source, uip_ds6_defrt_choose()))
     {
-        def_rt_rssi = sicslowpan_get_last_rssi();
+        def_rt_rssi = UIPBUF_ATTR_RSSI;
     }
 }
 
@@ -469,7 +469,7 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
         mqtt_action_ptr = FIRE_PUBLISH;
         buffer_index = 0;
         ctimer_set(&mqtt_callback_timer, 1 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
-        int random = random_rand() % 5 + 1;
+        int random = random_rand() % 4 + 2;
         LOG_INFO("Random interval for alert set: %d\n", random);
         ctimer_set(&mqtt_alert_timer, random * CLOCK_MINUTE, mqtt_callback, &alert);
         LOG_INFO("Application is subscribed to topic successfully\n");
