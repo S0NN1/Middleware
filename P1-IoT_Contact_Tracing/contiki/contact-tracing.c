@@ -202,7 +202,7 @@ static void echo_reply_handler(uip_ipaddr_t *source, uint8_t ttl, uint8_t *data,
 }
 
 /*******************************************************************************************************************/ /** 
- * \brief Function used for MQTT subscribing. Currently using MQTT_QOS_LEVEL_0 (No PUBACK). 
+ * \brief Function used for MQTT subscribing. Currently using MQTT_QOS_LEVEL_1 (PUBACK). 
  * 
  * @param topic MQTT subscribe topic. 
  **********************************************************************************************************************/
@@ -210,7 +210,7 @@ static void subscribe(char *topic)
 {
     mqtt_status_t status;
     LOG_DBG("Subscribing!\n");
-    status = mqtt_subscribe(&conn, NULL, topic, MQTT_QOS_LEVEL_0);
+    status = mqtt_subscribe(&conn, NULL, topic, MQTT_QOS_LEVEL_1);
     if (status == MQTT_STATUS_OUT_QUEUE_FULL)
     {
         LOG_ERR("Tried to subscribe but command queue was full!\n");
@@ -286,7 +286,7 @@ void send_to_mqtt_broker(char *message, char *action)
     }
     LOG_DBG("App Buffer: %s\n", app_buffer);
     mqtt_publish(&conn, NULL, pub_topic, (uint8_t *)app_buffer, strlen(app_buffer), MQTT_QOS_LEVEL_1, MQTT_RETAIN_OFF);
-    LOG_INFO("Published!\n");
+    LOG_INFO("Published: %s!\n", message);
 }
 
 static void mqtt_callback(void *ptr);
@@ -400,7 +400,7 @@ static void mqtt_callback(void *ptr)
     case FIRE_ALERT:
         construct_pub_topic(MQTT_ALERT_TOPIC);
         send_to_mqtt_broker(client_id, "ALERT");
-        int random = random_rand() % 5 + 1;
+        int random = random_rand() % 3 + 1;
         LOG_INFO("Random interval for alert reset: %d\n", random);
         ctimer_set(&mqtt_alert_timer, random * CLOCK_MINUTE, mqtt_callback, &alert);
         break;
@@ -469,7 +469,7 @@ static void mqtt_event(struct mqtt_connection *m, mqtt_event_t event, void *data
         mqtt_action_ptr = FIRE_PUBLISH;
         buffer_index = 0;
         ctimer_set(&mqtt_callback_timer, 1 * CLOCK_SECOND, mqtt_callback, &mqtt_action_ptr);
-        int random = random_rand() % 4 + 2;
+        int random = random_rand() % 3 + 1;
         LOG_INFO("Random interval for alert set: %d\n", random);
         ctimer_set(&mqtt_alert_timer, random * CLOCK_MINUTE, mqtt_callback, &alert);
         LOG_INFO("Application is subscribed to topic successfully\n");
@@ -499,7 +499,7 @@ static void update_config(void)
     snprintf(client_id, CLIENT_ID_SIZE, "d:%s:%s:%02x%02x%02x%02x%02x%02x", MQTT_CLIENT_ORG_ID, MQTT_CLIENT_TYPE_ID,
              linkaddr_node_addr.u8[0], linkaddr_node_addr.u8[1], linkaddr_node_addr.u8[2], linkaddr_node_addr.u8[5],
              linkaddr_node_addr.u8[6], linkaddr_node_addr.u8[7]);
-    snprintf(sub_topic, BUFFER_SIZE, "%s", "#");
+    snprintf(sub_topic, BUFFER_SIZE, "%s", client_id);
 }
 
 /*******************************************************************************************************************/ /** 
