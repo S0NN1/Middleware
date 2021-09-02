@@ -41,7 +41,7 @@
     {\large Professor\par
         Luca \textsc{Mottola}}
     \vfill
-    {\large \textbf{Version 1.0}\\ \today \par}
+    {\large \textbf{Version 1.1}\\ \today \par}
 \end{titlepage}
 \hypersetup{%
     pdfborder = {0 0 0}
@@ -124,6 +124,19 @@ The following list explains each component of the workflow:
 
 
 \subsection{Flow of execution}
+With reference to General Architecture (figure in paragraph 2.1) the execution flow is divided as follows:
+
+\begin{itemize}
+
+\item At the beginning of the execution of the Cooja simulation, a random timer is set for each single client mote to communicate the alerts (alerts will be sent to report Covid19 positivity).
+\item The individual motes, in order to exchange the actual contact information among themselves, communicate with each other at regular intervals via UDP broadcast, sending their own id. Each mote, upon receipt of one of these packets, puts each of them in a "contact" queue, which gradually fills up to be sent to the server later.
+\item Each motes (at regular intervals) notifies the server (via mqtt in the topic "motes-connections"), telling it about the contact between those two by referring to the previously filled queue: the message sent is composed of the id of the sender mote and the id of the mote wich has been in touch with the sender. After sending, the queue is emptied. The connection between the two motes is recorded in the KSQL “CONNECTIONS” table. For this type of message, the QoS chosen in use by the mqtt publish is 1: in a delivery and traffic guarantee tradeoff we preferred to opt to preserve a correct execution of the system, as contact is essential to then correctly determine the history. of the contacts of a possible positive.
+\item Each motes at random intervals notifies the server to be positive, thus sending its id inside the message. (topic mqtt-alerts). The positivity information, called "alert", is saved in the KSQL "ALERTS" table. For this type of message, the QoS chosen in use by publish mqtt is 1: as for the previous message, also for the notification of positivity it was considered essential by us to guarantee its correct transmission, in order to carry out the simulation correctly.
+\item In the jar producer "KafkaKsqlProducer.jar" residing in the server, in polling state on the KSQL “ALERTS” table, when it notices a positivity, it makes a query to KSQL on the CONNECTIONS table, filtering for the infected client's contacts. For each of the infected client’s contacts the server sends a dedicated notification via mqtt (via a topic dedicated to each "d: CLIENTID" mote). The jar server also takes care of possibly recreating the tables and database structure, should they not be present. For this type of message, the QoS chosen in use by the mqtt publish is 1 for the same reasons described in the previous messages.
+
+\end{itemize}
+
+Each mote during its execution prints on the screen in the cooja simulation all the messages received.
 
 \subsection{Assumptions}
 \begin{enumerate}[label=\textbf{A\arabic*:}]
